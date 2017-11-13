@@ -5,8 +5,8 @@
 ; A bit-banged full duplex serial terminal for the PET 2001 computers,
 ; including those running BASIC 1.
 ;
-; Targets 8N1 serial. 300 baud
-; 
+; Targets 8N1 serial. Baud rate will be whatever we can set the timer for
+; and be able to handle interrupts fast enough.
 ; 
 ;
 ; Hayden Kroepfl 2017
@@ -36,7 +36,7 @@ TXBYTE	DS.B	1		; Next byte to transmit
 RXBYTE	DS.B	1		; Last receved byte
 
 RXNEW	DS.B	1		; Indicates byte has been recieved
-
+TXNEW	DS.B	1		; Indicates to start sending a byte
 	REND
 ;-----------------------------------------------------------------------
 
@@ -50,7 +50,7 @@ STBIT	EQU	2		; Sending/receiving data
 STSTOP	EQU	4		; Sending/receiving stop bit
 
 
-BITCNT	EQU	8		; 8-bit
+BITCNT	EQU	8		; 8-bit bytes to recieve
 BITMSK	EQU	$FF		; No mask
 
 
@@ -96,13 +96,22 @@ START	SUBROUTINE
 
 
 
+
+
+
 ;-----------------------------------------------------------------------
 ; Bit-banged serial sample (Called at 3x baud rate)
 SERSAMP	SUBROUTINE
 	LDA	SERCNT
 	CMP	RXTGT		; Check if we're due for the next Rx event
+	BNE	.trytx
 	JSR	SERRX
+.trytx
+	CMP	TXTGT
+	BNE	.end
 	JSR	SERTX
+.end
+	INC	SERCNT
 	RTS
 	
 ; Do a Rx sample
@@ -132,7 +141,9 @@ SERRX	SUBROUTINE
 .nextstart
 	LDA	#STSTART
 	STA	RXSTATE
-	JMP	.next3		
+	JMP	.next3		; Change this if we want to change 
+				; the stop bit length (3 = 1 bit, 6 = 2 bits)
+	
 		
 .datab
 	CLC
@@ -166,16 +177,81 @@ SERRX	SUBROUTINE
 	RTS
 	
 	
+
+
+; Do a Tx sample event
+SERTX	SUBROUTINE
+	LDA	TXSTATE
+	CMP	#STRDY
+	BEQ	.ready
+	CMP	#STSTART
+	BEQ	.start
+	CMP	#STBIT
+	BEQ	.datab
+	CMP	#STSTOP
+	BEQ	.stop
+	; Invalid state
+	LDA	#STREADY
+	STA	TXSTATE
+	JMP	.ready		; Treat as ready state
+.stop	; Send stop bit
+	EOR	A
+	CALL	SETTX		; Send stop bit
+	LDA	#STRDY
+	STA	TXSTATE
+	JMP	.next3		; Change this if we want to change 
+				; the stop bit length (3 = 1 bit, 6 = 2 bits)
+.datab	; Send data bit
+	EOR	A
+	ROL	TXCUR		; Rotate current bit into carry
+	ROL	A		; Place into A
+	CALL	SETTX
+	INC	RXBIT
+	LDA	RXBIT
+	CMP	#BITCNT
+	BNE	.next3		; If more bits to go
+	LDA	#STSTOP
+	STA	TXSTATE
+	JMP	.next3		; Hold for 3 samples
+	
+.start	; Send start bit
+	EOR	A		
+	STA	TXBIT		; Reset bit count
+	CALL	SETTX		; Send Start bit
+	LDA	#STBIT
+	STA	TXSTATE
+	JMP	.next3		; Hold start bit for 3 samples
+	
+.ready
+	LDA	#1
+	CALL	SETTX		; Idle state
+	
+	LDA	TXNEW		; Check if we have a byte waiting to send
+	BPL	.next1		; If not check again next sample		
+	LDA	TXBYTE
+	STA	TXCUR		; Copy byte to read
+	EOR	A
+	STA	TXNEW		; Reset new flag
+	LDA	#STSTART	
+	STA	TXSTATE
+	JMP	.next1		; Start sending next sample period
+.next3	
+	INC	TXSAMP
+.next2
+	INC	TXSAMP
+.next1
+	INC	TXSAMP
+	RTS
+	
+	
+	
+	
+	
 ; Sample the Rx pin into RXSAMP
 ; 1 for high, 0 for low
 ; NOTE: If we want to support inverse serial do it in here, and SERTX
 SAMPRX	SUBROUTINE
 	
-	RTS
-
-
-; Do a Tx sample event
-SERTX	SUBROUTINE
 	RTS
 
 
