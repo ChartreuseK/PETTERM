@@ -231,6 +231,7 @@ INIT	SUBROUTINE
 ;-----------------------------------------------------------------------
 ; Start of program (after INIT called)
 START	SUBROUTINE
+	
 	LDA	#'H
 	JSR	PUTCH
 	LDA	#'E
@@ -254,25 +255,10 @@ START	SUBROUTINE
 	LDA	#'D
 	JSR	PUTCH
 	
-.l2
-	LDX	#0
-.loop
-	TXA
-	PHA
-	JSR	PUTCH
-	LDY	#0
-	LDX	#16
-;.dly
-;	DEY
-;	BNE	.dly
-;	DEX
-;	BNE	.dly
+	CLI	; Enable interrupts
 	
-	PLA
-	TAX
-	INX
-	BNE	.loop
-	JMP	.l2
+	
+	
 HALT	
 	JMP	HALT
 
@@ -295,10 +281,14 @@ BAUDTBLH
 ;-----------------------------------------------------------------------
 ; Interrupt handler
 IRQHDLR	SUBROUTINE
+	SEI
 	; We'll assume that the only IRQ firing is for the VIA timer 1
 	; (ie. We've set it up right)
 	LDA	VIA_TIM1L	; Acknowlege the interrupt
 	JSR	SERSAMP		; Do our sampling
+	
+	;LDA	#$40		; @
+	;JSR	PUTCH
 IRQEXIT
 	; Restore registers saved on stack by KERNAL
 	PLA			; Pop Y
@@ -306,6 +296,7 @@ IRQEXIT
 	PLA			; Pop X
 	TAX
 	PLA			; Pop A
+	CLI
 	RTI			; Return from interrupt
 
 ;-----------------------------------------------------------------------
@@ -470,16 +461,23 @@ SERTX	SUBROUTINE
 ; 1 for high, 0 for low
 ; NOTE: If we want to support inverse serial do it in here, and SETTX
 SAMPRX	SUBROUTINE
-	
+	LDA	#1
+	STA	RXSAMP
 	RTS
 
 ;-----------------------------------------------------------------------
 ; Set Tx pin to value in A
 SETTX	SUBROUTINE
 	
+	RTS
 
 
 
+
+
+;#######################################################################
+; Screen routines
+;#######################################################################
 
 ;-----------------------------------------------------------------------
 ; Clear screen
