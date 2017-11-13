@@ -12,7 +12,37 @@
 ;     http://www.6502.org/users/andre/petindex/progmod.html 
 ;     http://www.zimmers.net/cbmpics/cbm/PETx/petmem.txt
 ;     http://www.commodore.ca/manuals/commodore_pet_2001_quick_reference.pdf
-; 
+
+; I believe the VIA should be running at CPU clock rate of 1MHz
+; This does not divide evenly to common baud rates, there will be some error
+; Though the error values seem almost insignificant, even with the int. divisor
+;  Timer values for various common baud rates:
+;	110  - $2383  (9090.90...)  0.001% error
+;	  Are you hooking this up to an ASR-33 or something?
+; 	300  - $0D05  (3333.33...)  -0.01% error
+;	600  - $0683  (1666.66...)  -0.04% error
+;	1200 - $0341  (833.33...)   -0.04% error
+;	2400 - $01A1  (416.66...)    0.08% error
+;	4800 - $00D0  (208.33...)   -0.16% error
+;	9600 - $0068  (104.16...)   -0.16% error
+;	  I'd be impressed if we could run this fast without overrun
+; Since we need 3x oversampling for our bit-bang routines, the valus we need
+; are for 3x the baud rate:
+;	110  - $0BD6  (3030.30...)  -0.01% error
+; 	300  - $0457  (1111.11...)  -0.01% error
+;	600  - $022C  (555.55...)   +0.08% error
+;	1200 - $0116  (277.77...)   +0.08% error
+;	2400 - $008B  (138.88...)   +0.08% error
+;	4800 - $0045  (69.44...)    -0.64% error
+;	9600 - $0023  (34.722...)   +0.80% error
+;
+; All of these are within normal baud rate tollerances of +-2% 
+; Thus we should be fine to use them, though we'll be limited by just how
+; fast our bit-bang isr is. I don't think the slowest path is < 35 cycles
+; 2400 is probably the upper limit if we optimize, especially since we have
+; to handle each character as well as recieve it. Though with flow control
+; we might be able to push a little bit.
+;
 ; Hayden Kroepfl 2017
 ;
 ; Written for the DASM assembler
@@ -45,6 +75,7 @@ RXBYTE	DS.B	1		; Last receved byte
 RXNEW	DS.B	1		; Indicates byte has been recieved
 TXNEW	DS.B	1		; Indicates to start sending a byte
 
+BAUD	DS.B	1		; Current baud rate, index into table
 
 ; Make sure not to use $90-95	, Vectors for BASIC 2+
 	REND
@@ -133,10 +164,18 @@ INIT	SUBROUTINE
 	; TODO: What's a reliale way? Maybe probe for a byte that's
 	; different in each version. Find such a byte using emulators.
 	
+	LDA	#$01		; 300 baud
+	STA	BAUD
+	
 	; Set timer to 3x desired initial baud rate
+	LDX	BAUD
+	LDA	BAUDTBLL,X
+	STA	VIA_TIM1LL
+	LDA	BAUDTBLH,X
+	STA	VIA_TIM1LH
 	
 	; Set VIA interrupts so that our timer is the only interrupt source
-	
+
 	; Install IRQ
 	LDA	#<SOUND_IRQ
 	LDX	#>SOUND_IRQ
@@ -161,6 +200,19 @@ INIT	SUBROUTINE
 START	SUBROUTINE
 	
 
+
+
+;-----------------------------------------------------------------------
+; Static data
+
+; Baud rate timer values
+;		 110  300  600 1200 2400 4800 9600
+BAUDTBLL 
+	DC.B	$D6, $57, $2c, $16, $8B, $45, $23
+BAUDTBLH	
+	DC.B	$0B, $04, $02, $01, $00, $00, $00
+	
+;-----------------------------------------------------------------------
 
 
 
@@ -350,3 +402,6 @@ SAMPRX	SUBROUTINE
 ; Set Tx pin to value in A
 SETTX	SUBROUTINE
 	
+
+
+
