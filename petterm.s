@@ -120,6 +120,8 @@ VIA_IER    EQU	$E84E		; Interrupt enable register
 VIA_PORTA  EQU	$E84F		; User-port without CA2 handshake
 
 SCRMEM     EQU	$8000		; Start of screen memory
+SCREND	   EQU	SCRMEM+(SCRCOL*SCRROW) ; End of screen memory
+SCRBTML	   EQU  SCRMEM+(SCRCOL*(SCRROW-1)) ; Start of last row
 
 ; These are for BASIC2/4 according to 
 ; http://www.zimmers.net/cbmpics/cbm/PETx/petmem.txt
@@ -218,6 +220,10 @@ INIT	SUBROUTINE
 	STA	RXNEW		; No bytes ready
 	STA	TXNEW		; No bytes ready
 	
+	STA	CURLOC
+	LDA	#$80
+	STA	CURLOC+1
+	
 	; Set-up screen
 	JSR	CLRSCR
 	
@@ -225,7 +231,6 @@ INIT	SUBROUTINE
 ;-----------------------------------------------------------------------
 ; Start of program (after INIT called)
 START	SUBROUTINE
-	
 	LDA	#'H
 	JSR	PUTCH
 	LDA	#'E
@@ -248,6 +253,26 @@ START	SUBROUTINE
 	JSR	PUTCH
 	LDA	#'D
 	JSR	PUTCH
+	
+.l2
+	LDX	#0
+.loop
+	TXA
+	PHA
+	JSR	PUTCH
+	LDY	#0
+	LDX	#16
+;.dly
+;	DEY
+;	BNE	.dly
+;	DEX
+;	BNE	.dly
+	
+	PLA
+	TAX
+	INX
+	BNE	.loop
+	JMP	.l2
 HALT	
 	JMP	HALT
 
@@ -462,7 +487,7 @@ CLRSCR	SUBROUTINE
 	; Screen is 40x25 (1000 bytes)
 	; We probably should clear the remaining part of the screen
 	; on 80 column PETs. Should just be 4 more STA statements
-	LDA	#0		; Fill byte for screen
+	LDA	#$20		; Fill byte for screen
 	LDX	#0		; We want to write 256 times
 .loop
 	STA	SCRMEM+0,X	; Clear all 1024 bytes in one pass
@@ -478,14 +503,14 @@ CLRSCR	SUBROUTINE
 ; TODO: Is there a cleaner way to do this fairly fast?
 SCROLL	SUBROUTINE
 	; Scroll characters upwards
-	LDA	#<SCRMEM
+	LDA	#<(SCRMEM-1)
 	STA	.first
-	LDA	#>SCRMEM
+	LDA	#>(SCRMEM-1)
 	STA	.first+1
 	
-	LDA	#<(SCRMEM+SCRCOL)
+	LDA	#<(SCRMEM+SCRCOL-1)
 	STA	.second
-	LDA	#>(SCRMEM+SCRCOL)
+	LDA	#>(SCRMEM+SCRCOL-1)
 	STA	.second+1
 	
 	LDY	#SCRROW		; Do 1 screen of rows
@@ -517,6 +542,13 @@ SCROLL	SUBROUTINE
 	
 	DEY
 	BNE	.loopb
+	; Clear last row
+	LDA	#$20		; Blanking character
+	LDX	#SCRCOL
+.clrloop
+	STA	SCRBTML,X
+	DEX
+	BNE	.clrloop
 	RTS
 
 ;-----------------------------------------------------------------------
@@ -536,7 +568,20 @@ PUTCH	SUBROUTINE
 
 	; Check if we wrote the character in the bottom right
 	; and need to scroll the screen
-	
+	LDA	#<(SCREND)
+	CMP	CURLOC
+	BNE	.done
+	LDA	#>(SCREND)
+	CMP	CURLOC+1
+	BNE	.done
+	; Need to scroll
+	JSR	SCROLL
+	; Move cursor to bottom left
+	LDA	#<SCRBTML
+	STA	CURLOC
+	LDA	#>SCRBTML
+	STA	CURLOC+1
+.done
 	RTS
 	
 ;-----------------------------------------------------------------------
@@ -553,13 +598,10 @@ SCRCONV	SUBROUTINE
 	CMP	#$80		; $60 to $7F are 'lowercase' letters
 	BCC	.lower
 	; > $80 Then just map to arbitrary PETSCII for now
+.upper
 	SEC
 	SBC	#$40
 .done
-	RTS
-.upper
-	SEC
-	SBC	#$20
 	RTS
 .lower
 	SEC
