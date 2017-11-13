@@ -77,6 +77,10 @@ TXNEW	DS.B	1		; Indicates to start sending a byte
 
 BAUD	DS.B	1		; Current baud rate, index into table
 
+COL	DS.B	1		; Current cursor position		
+ROW	DS.B	1
+
+CURLOC	DS.W	1		; Pointer to current screen location
 ; Make sure not to use $90-95	, Vectors for BASIC 2+
 	REND
 ;-----------------------------------------------------------------------
@@ -93,6 +97,11 @@ STSTOP	EQU	3		; Sending/receiving stop bit
 BITCNT	EQU	8		; 8-bit bytes to recieve
 BITMSK	EQU	$FF		; No mask
 
+SCRCOL	EQU	40		; Screen columns
+SCRROW	EQU	25
+
+COLMAX	EQU	40		; Max display columns
+ROWMAX	EQU	25
 
 ; 6522 VIA 
 VIA_PORTAH EQU	$E841		; User-port with CA2 handshake (messes with screen)
@@ -110,12 +119,13 @@ VIA_IER    EQU	$E84E		; Interrupt enable register
 
 VIA_PORTA  EQU	$E84F		; User-port without CA2 handshake
 
+SCRMEM     EQU	$8000		; Start of screen memory
+
 ; These are for BASIC2/4 according to 
 ; http://www.zimmers.net/cbmpics/cbm/PETx/petmem.txt
 ; Also make sure our ZP allocations don't overwrite
 BAS4_VECT_IRQ  EQU	$0090	; 90/91 - Hardware interrupt vector
 BAS4_VECT_BRK  EQU	$0092	; 92/93 - BRK vector
-
 
 ; This is for a 2001-8 machine according to:
 ; http://www.commodore.ca/manuals/commodore_pet_2001_quick_reference.pdf
@@ -123,6 +133,12 @@ BAS4_VECT_BRK  EQU	$0092	; 92/93 - BRK vector
 BAS1_VECT_IRQ  EQU	$0219	; 219/220 - Interrupt vector
 BAS1_VECT_BRK  EQU	$0216	; 216/217 - BRK vector
 
+; Kernal routines (confirm these are the same between BASIC 1,2,4
+KRN_WRT	EQU	$FFD2		; Write character in A
+KRN_GET EQU	$FFE4		; Get a character NZ if key pressed, Z if. ch in A
+; I don't think these are portable
+KRN_SCROLL EQU	$E559		; Scroll screen one line
+KRN_CLR EQU	$E236		; Clear screen
 
 ;-----------------------------------------------------------------------
 ; Start of loaded data
@@ -157,30 +173,37 @@ BLDR_ENDL
 INIT	SUBROUTINE
 	SEI			; Disable interrupts
 	; We never plan to return to BASIC, steal everything!
-	LDX	#FF		; Set start of stack
+	LDX	#$FF		; Set start of stack
 	TXS			; Set stack pointer to top of stack
 	
 	; Determine which version of BASIC we have for a KERNAL
 	; TODO: What's a reliale way? Maybe probe for a byte that's
 	; different in each version. Find such a byte using emulators.
 	
+	
+	; Set timer to 3x desired initial baud rate
 	LDA	#$01		; 300 baud
 	STA	BAUD
 	
-	; Set timer to 3x desired initial baud rate
 	LDX	BAUD
 	LDA	BAUDTBLL,X
 	STA	VIA_TIM1LL
 	LDA	BAUDTBLH,X
-	STA	VIA_TIM1LH
+	STA	VIA_TIM1HL
 	
 	; Set VIA interrupts so that our timer is the only interrupt source
-
+	; This should also disable the CA1 60Hz interrupt. We don't care
+	; about the jiffies. (I hope)
+	LDA	#$C0		; Enable VIA interrupt and Timer 1 interrupt
+	STA	VIA_IER
+	
 	; Install IRQ
-	LDA	#<SOUND_IRQ
-	LDX	#>SOUND_IRQ
+	LDA	#<IRQHDLR
+	LDX	#>IRQHDLR
 	STA	BAS1_VECT_IRQ	; Modify based on BASIC version
 	STX	BAS1_VECT_IRQ+1
+	STA	BAS4_VECT_IRQ	; Let's see if we can get away with modifying
+	STX	BAS4_VECT_IRQ+1	; both versions vectors
 	
 	; Initialize state
 	LDA	#STSTART
@@ -188,18 +211,45 @@ INIT	SUBROUTINE
 	LDA	#STRDY
 	STA	TXSTATE
 	
-	EOR	A		; LDA #0
+	LDA	#0
 	STA	SERCNT
 	STA	TXTGT		; Fire Immediatly
 	STA	RXTGT		; Fire immediatly
 	STA	RXNEW		; No bytes ready
 	STA	TXNEW		; No bytes ready
+	
+	; Set-up screen
+	JSR	CLRSCR
+	
 	; Fall into START
 ;-----------------------------------------------------------------------
 ; Start of program (after INIT called)
 START	SUBROUTINE
 	
-
+	LDA	#'H
+	JSR	PUTCH
+	LDA	#'E
+	JSR	PUTCH
+	LDA	#'L
+	JSR	PUTCH
+	LDA	#'L
+	JSR	PUTCH
+	LDA	#'O
+	JSR	PUTCH
+	LDA	#' 
+	JSR	PUTCH
+	LDA	#'W
+	JSR	PUTCH
+	LDA	#'O
+	JSR	PUTCH
+	LDA	#'R
+	JSR	PUTCH
+	LDA	#'L
+	JSR	PUTCH
+	LDA	#'D
+	JSR	PUTCH
+HALT	
+	JMP	HALT
 
 
 ;-----------------------------------------------------------------------
@@ -219,11 +269,11 @@ BAUDTBLH
 
 ;-----------------------------------------------------------------------
 ; Interrupt handler
-IRQHLDR	SUBROUTINE
+IRQHDLR	SUBROUTINE
 	; We'll assume that the only IRQ firing is for the VIA timer 1
 	; (ie. We've set it up right)
 	LDA	VIA_TIM1L	; Acknowlege the interrupt
-	CALL	SERSAMP		; Do our sampling
+	JSR	SERSAMP		; Do our sampling
 IRQEXIT
 	; Restore registers saved on stack by KERNAL
 	PLA			; Pop Y
@@ -256,7 +306,7 @@ SERRX	SUBROUTINE
 	LDA	RXSTATE
 	CMP	#STSTART	; Waiting for start bit
 	BEQ	.start
-	CMP	#STDATA		; Sample data bit
+	CMP	#STBIT		; Sample data bit
 	BEQ	.datab
 	CMP	#STSTOP		; Sample stop bit
 	BEQ	.stop
@@ -298,18 +348,18 @@ SERRX	SUBROUTINE
 	LDA	RXSAMP
 	CMP	#1		; Check if high
 	BEQ	.next1		; If we didn't find it, try again next sample
-	LDA	#STDATA
+	LDA	#STBIT
 	STA	RXSTATE
-	EOR	A		; Reset bit count
+	LDA	#0		; Reset bit count
 	STA	RXBIT
 .next4
-	INC	RXSAMP		; Next sample at cur+4
+	INC	RXTGT		; Next sample at cur+4
 .next3
-	INC	RXSAMP		; cur + 3
+	INC	RXTGT		; cur + 3
 .next2
-	INC	RXSAMP		; Cur + 2
+	INC	RXTGT		; Cur + 2
 .next1
-	INC	RXSAMP		; Cur + 1
+	INC	RXTGT		; Cur + 1
 	RTS
 	
 	
@@ -327,21 +377,21 @@ SERTX	SUBROUTINE
 	CMP	#STSTOP
 	BEQ	.stop
 	; Invalid state
-	LDA	#STREADY
+	LDA	#STRDY
 	STA	TXSTATE
 	JMP	.ready		; Treat as ready state
 .stop	; Send stop bit
-	EOR	A
-	CALL	SETTX		; Send stop bit
+	LDA	#0
+	JSR	SETTX		; Send stop bit
 	LDA	#STRDY
 	STA	TXSTATE
 	JMP	.next3		; Change this if we want to change 
 				; the stop bit length (3 = 1 bit, 6 = 2 bits)
 .datab	; Send data bit
-	EOR	A
+	LDA	#0
 	ROL	TXCUR		; Rotate current bit into carry
-	ROL	A		; Place into A
-	CALL	SETTX
+	ROL			; Place into A
+	JSR	SETTX
 	INC	RXBIT
 	LDA	RXBIT
 	CMP	#BITCNT
@@ -351,32 +401,32 @@ SERTX	SUBROUTINE
 	JMP	.next3		; Hold for 3 samples
 	
 .start	; Send start bit
-	EOR	A		
+	LDA	#0	
 	STA	TXBIT		; Reset bit count
-	CALL	SETTX		; Send Start bit
+	JSR	SETTX		; Send Start bit
 	LDA	#STBIT
 	STA	TXSTATE
 	JMP	.next3		; Hold start bit for 3 samples
 	
 .ready
 	LDA	#1
-	CALL	SETTX		; Idle state
+	JSR	SETTX		; Idle state
 	
 	LDA	TXNEW		; Check if we have a byte waiting to send
 	BPL	.next1		; If not check again next sample		
 	LDA	TXBYTE
 	STA	TXCUR		; Copy byte to read
-	EOR	A
+	LDA	#0
 	STA	TXNEW		; Reset new flag
 	LDA	#STSTART	
 	STA	TXSTATE
 	JMP	.next1		; Start sending next sample period
 .next3	
-	INC	TXSAMP
+	INC	TXTGT
 .next2
-	INC	TXSAMP
+	INC	TXTGT
 .next1
-	INC	TXSAMP
+	INC	TXTGT
 	RTS
 	
 	
@@ -404,4 +454,119 @@ SETTX	SUBROUTINE
 	
 
 
+
+
+;-----------------------------------------------------------------------
+; Clear screen
+CLRSCR	SUBROUTINE
+	; Screen is 40x25 (1000 bytes)
+	; We probably should clear the remaining part of the screen
+	; on 80 column PETs. Should just be 4 more STA statements
+	LDA	#0		; Fill byte for screen
+	LDX	#0		; We want to write 256 times
+.loop
+	STA	SCRMEM+0,X	; Clear all 1024 bytes in one pass
+	STA	SCRMEM+256,X
+	STA	SCRMEM+512,X
+	STA	SCRMEM+768,X
+	DEX
+	BNE	.loop
+	RTS
+	
+;-----------------------------------------------------------------------
+; Scroll the screen by one line
+; TODO: Is there a cleaner way to do this fairly fast?
+SCROLL	SUBROUTINE
+	; Scroll characters upwards
+	LDA	#<SCRMEM
+	STA	.first
+	LDA	#>SCRMEM
+	STA	.first+1
+	
+	LDA	#<(SCRMEM+SCRCOL)
+	STA	.second
+	LDA	#>(SCRMEM+SCRCOL)
+	STA	.second+1
+	
+	LDY	#SCRROW		; Do 1 screen of rows
+.loopb
+	LDX	#SCRCOL		; Do 1 row of columns
+.loopa
+.second EQU	.+1		; Address word of LDA
+	LDA	$FFFF,X		; Read from second row
+.first	EQU	.+1		; Address word of STA
+	STA	$FFFF,X		; Store in first row
+	DEX
+	BNE	.loopa
+	; Add SCRCOL to .first and .second
+	CLC
+	LDA	#SCRCOL
+	ADC	.first
+	STA	.first
+	LDA	#0
+	ADC	.first+1
+	STA	.first+1
+	
+	CLC
+	LDA	#SCRCOL
+	ADC	.second
+	STA	.second
+	LDA	#0
+	ADC	.second+1
+	STA	.second+1
+	
+	DEY
+	BNE	.loopb
+	RTS
+
+;-----------------------------------------------------------------------
+; Write a character to the current position
+PUTCH	SUBROUTINE
+	JSR	SCRCONV		; Convert ASCII to screen representation
+	LDY	#0 
+	STA	(CURLOC),Y	; Store to current position
+	
+	LDA	#1		; 16-bit increment
+	CLC
+	ADC	CURLOC
+	STA	CURLOC
+	LDA	#0
+	ADC	CURLOC+1
+	STA	CURLOC+1
+
+	; Check if we wrote the character in the bottom right
+	; and need to scroll the screen
+	
+	RTS
+	
+;-----------------------------------------------------------------------
+; Convert ASCII to screen characters
+; If this is too slow and we have RAM avail, then use a straight lookup table
+; ( Ie TAX; LDA LOOKUP,X; RTS )
+SCRCONV	SUBROUTINE
+	CMP	#$20
+	BCC	.nonprint	; <$20 aren't printable, may have sideeffects
+	CMP	#$40		; $20 to $3F don't adjust
+	BCC	.done
+	CMP	#$60		; $40 to $5F are 'uppercase' letters
+	BCC	.upper
+	CMP	#$80		; $60 to $7F are 'lowercase' letters
+	BCC	.lower
+	; > $80 Then just map to arbitrary PETSCII for now
+	SEC
+	SBC	#$40
+.done
+	RTS
+.upper
+	SEC
+	SBC	#$20
+	RTS
+.lower
+	SEC
+	SBC	#$60		; Convert to uppercase letters
+	RTS
+.nonprint
+	LDA	#$A0		; Inverse Space
+	RTS
+	
 
