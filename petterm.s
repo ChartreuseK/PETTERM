@@ -81,6 +81,9 @@ COL	DS.B	1		; Current cursor position
 ROW	DS.B	1
 
 CURLOC	DS.W	1		; Pointer to current screen location
+
+TMP	DS.B	1	
+TMP2	DS.B	1
 ; Make sure not to use $90-95	, Vectors for BASIC 2+
 	REND
 ;-----------------------------------------------------------------------
@@ -114,10 +117,20 @@ VIA_TIM1HL EQU	$E847		; high latch
 VIA_TIM2L  EQU	$E848		; Timer 2 low byte
 VIA_TIM2H  EQU	$E849		; high
 
+VIA_ACR	   EQU	$E84B
+VIA_PCR    EQU  $E84C
+
 VIA_IFR    EQU	$E84D		; Interrupt flag register
 VIA_IER    EQU	$E84E		; Interrupt enable register
 
+
 VIA_PORTA  EQU	$E84F		; User-port without CA2 handshake
+
+
+PIA1_CRA   EQU  $e811
+PIA1_CRB   EQU  $e813
+PIA2_CRA   EQU  $e821
+PIA2_CRB   EQU  $e823
 
 SCRMEM     EQU	$8000		; Start of screen memory
 SCREND	   EQU	SCRMEM+(SCRCOL*SCRROW) ; End of screen memory
@@ -193,11 +206,13 @@ INIT	SUBROUTINE
 	LDA	BAUDTBLH,X
 	STA	VIA_TIM1HL
 	
-	; Set VIA interrupts so that our timer is the only interrupt source
-	; This should also disable the CA1 60Hz interrupt. We don't care
-	; about the jiffies. (I hope)
-	LDA	#$C0		; Enable VIA interrupt and Timer 1 interrupt
-	STA	VIA_IER
+	
+	LDA	PIA1_CRB
+	AND	#$F6		; Disable interrupts (60hz retrace int)
+	STA	PIA1_CRB	
+	
+	
+	JSR	INITVIA
 	
 	; Install IRQ
 	LDA	#<IRQHDLR
@@ -231,28 +246,7 @@ INIT	SUBROUTINE
 ;-----------------------------------------------------------------------
 ; Start of program (after INIT called)
 START	SUBROUTINE
-	
-	LDA	#'H
-	JSR	PUTCH
-	LDA	#'E
-	JSR	PUTCH
-	LDA	#'L
-	JSR	PUTCH
-	LDA	#'L
-	JSR	PUTCH
-	LDA	#'O
-	JSR	PUTCH
-	LDA	#' 
-	JSR	PUTCH
-	LDA	#'W
-	JSR	PUTCH
-	LDA	#'O
-	JSR	PUTCH
-	LDA	#'R
-	JSR	PUTCH
-	LDA	#'L
-	JSR	PUTCH
-	LDA	#'D
+	LDA	#'@
 	JSR	PUTCH
 	
 	CLI	; Enable interrupts
@@ -260,6 +254,13 @@ START	SUBROUTINE
 	
 	
 HALT	
+	LDA	RXNEW
+	BEQ	HALT
+	LDA	#0
+	STA	RXNEW
+	LDA	RXBYTE
+	JSR	PUTCH
+	
 	JMP	HALT
 
 
@@ -281,22 +282,20 @@ BAUDTBLH
 ;-----------------------------------------------------------------------
 ; Interrupt handler
 IRQHDLR	SUBROUTINE
-	SEI
 	; We'll assume that the only IRQ firing is for the VIA timer 1
 	; (ie. We've set it up right)
 	LDA	VIA_TIM1L	; Acknowlege the interrupt
 	JSR	SERSAMP		; Do our sampling
 	
-	;LDA	#$40		; @
-	;JSR	PUTCH
 IRQEXIT
+	;LDA	VIA_TIM1L	; Acknowlege the interrupt
+	STA	VIA_TIM1H
 	; Restore registers saved on stack by KERNAL
 	PLA			; Pop Y
 	TAY
 	PLA			; Pop X
 	TAX
 	PLA			; Pop A
-	CLI
 	RTI			; Return from interrupt
 
 ;-----------------------------------------------------------------------
@@ -305,11 +304,11 @@ SERSAMP	SUBROUTINE
 	LDA	SERCNT
 	CMP	RXTGT		; Check if we're due for the next Rx event
 	BNE	.trytx
-	JSR	SERRX
+	;JSR	SERRX
 .trytx
 	CMP	TXTGT
 	BNE	.end
-	JSR	SERTX
+	;JSR	SERTX
 .end
 	INC	SERCNT
 	RTS
@@ -461,20 +460,44 @@ SERTX	SUBROUTINE
 ; 1 for high, 0 for low
 ; NOTE: If we want to support inverse serial do it in here, and SETTX
 SAMPRX	SUBROUTINE
-	LDA	#1
+	LDA	VIA_PORTA
+	AND	#$01		; Only read the Rx pin
 	STA	RXSAMP
 	RTS
 
 ;-----------------------------------------------------------------------
 ; Set Tx pin to value in A
+; Tx pin is on userport M (CB2)
+; If serial inversion needed, change BEQ to BNE
 SETTX	SUBROUTINE
-	
+	CMP	#0
+	BEQ	.low		; BEQ for normal, BNE for 'inverted'
+	LDA	VIA_PCR
+	ORA	$20		; Make bit 5 high
+	RTS
+.low
+	LDA	VIA_PCR
+	AND	$DF		; Make bit 5 low
+	STA	VIA_PCR
 	RTS
 
 
-
-
-
+;-----------------------------------------------------------------------
+; Initialize VIA and userport
+INITVIA SUBROUTINE
+	LDA	#$00		; Rx pin in (PA0) (rest input as well)
+	STA	VIA_DDRA	; Set directions
+	LDA	#$40		; Shift register disabled, no latching, T1 free-run
+	STA	VIA_ACR		
+	LDA	#$EC		; Tx as output high, uppercase+graphics ($EE for lower)
+	STA	VIA_PCR		
+	; Set VIA interrupts so that our timer is the only interrupt source
+	; This should also disable the CA1 60Hz interrupt. We don't care
+	; about the jiffies. (I hope)
+	LDA	#$C0		; Enable VIA interrupt and Timer 1 interrupt
+	STA	VIA_IER
+	RTS
+	
 ;#######################################################################
 ; Screen routines
 ;#######################################################################
