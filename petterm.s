@@ -7,8 +7,12 @@
 ;
 ; Targets 8N1 serial. Baud rate will be whatever we can set the timer for
 ; and be able to handle interrupts fast enough.
-; 
 ;
+; References:
+;     http://www.6502.org/users/andre/petindex/progmod.html 
+;     http://www.zimmers.net/cbmpics/cbm/PETx/petmem.txt
+;     http://www.commodore.ca/manuals/commodore_pet_2001_quick_reference.pdf
+; 
 ; Hayden Kroepfl 2017
 ;
 ; Written for the DASM assembler
@@ -37,27 +41,61 @@ RXBYTE	DS.B	1		; Last receved byte
 
 RXNEW	DS.B	1		; Indicates byte has been recieved
 TXNEW	DS.B	1		; Indicates to start sending a byte
+
+
+; Make sure not to use $90-95	, Vectors for BASIC 2+
 	REND
 ;-----------------------------------------------------------------------
 
 ;-----------------------------------------------------------------------
 ; GLOBAL Defines
 ;-----------------------------------------------------------------------
-STSTART	EQU	0		; Waiting for start bit
-STDONE	EQU	0		; Finished sending
+STSTART	EQU	0		; Waiting/Sending for start bit
 STRDY	EQU	1		; Ready to start sending
 STBIT	EQU	2		; Sending/receiving data
-STSTOP	EQU	4		; Sending/receiving stop bit
+STSTOP	EQU	3		; Sending/receiving stop bit
 
 
 BITCNT	EQU	8		; 8-bit bytes to recieve
 BITMSK	EQU	$FF		; No mask
 
 
+; 6522 VIA 
+VIA_PORTAH EQU	$E841		; User-port with CA2 handshake (messes with screen)
+VIA_DDRA   EQU	$E843		; User-port directions
+
+VIA_TIM1L  EQU	$E844		; Timer 1 low byte
+VIA_TIM1H  EQU	$E845		; high
+VIA_TIM1LL EQU	$E846		; Timer 1 low byte latch
+VIA_TIM1HL EQU	$E847		; high latch
+VIA_TIM2L  EQU	$E848		; Timer 2 low byte
+VIA_TIM2H  EQU	$E849		; high
+
+VIA_IFR    EQU	$E84D		; Interrupt flag register
+VIA_IER    EQU	$E84E		; Interrupt enable register
+
+VIA_PORTA  EQU	$E84F		; User-port without CA2 handshake
+
+; These are for BASIC2/4 according to 
+; http://www.zimmers.net/cbmpics/cbm/PETx/petmem.txt
+; Also make sure our ZP allocations don't overwrite
+BAS4_VECT_IRQ  EQU	$0090	; 90/91 - Hardware interrupt vector
+BAS4_VECT_BRK  EQU	$0092	; 92/93 - BRK vector
+
+
+; This is for a 2001-8 machine according to:
+; http://www.commodore.ca/manuals/commodore_pet_2001_quick_reference.pdf
+; This is presumably for a BASIC 1.0 machine!
+BAS1_VECT_IRQ  EQU	$0219	; 219/220 - Interrupt vector
+BAS1_VECT_BRK  EQU	$0216	; 216/217 - BRK vector
+
+
 ;-----------------------------------------------------------------------
 ; Start of loaded data
 	SEG	CODE
-	ORG	$0401           ; For PET 2001
+	ORG	$0401           ; For PET 2001 
+	; I saw that the PET 2001 with BASIC 1.0 might need to be loaded at $400
+	; instead of $401? Confirm?
 
 
 
@@ -83,6 +121,19 @@ BLDR_ENDL
 ;-----------------------------------------------------------------------
 ; Initialization
 INIT	SUBROUTINE
+	; We never plan to return to BASIC, steal everything!
+	LDX	#FF		; Set start of stack
+	TXS			; Set stack pointer to top of stack
+	
+	; Determine which version of BASIC we have for a KERNAL
+	; TODO: What's a reliale way? Maybe probe for a byte that's
+	; different in each version. Find such a byte using emulators.
+	
+	; Set timer to 3x desired initial baud rate
+	
+	; Set VIA interrupts so that our timer is the only interrupt source
+	
+	; Install IRQ
 	
 	; Fall into START
 ;-----------------------------------------------------------------------
@@ -91,13 +142,21 @@ START	SUBROUTINE
 
 
 
-
-
-
-
-
-
-
+;-----------------------------------------------------------------------
+; Interrupt handler
+IRQHLDR	SUBROUTINE
+	; We'll assume that the only IRQ firing is for the VIA timer 1
+	; (ie. We've set it up right)
+	LDA	VIA_TIM1L	; Acknowlege the interrupt
+	CALL	SERSAMP		; Do our sampling
+IRQEXIT
+	; Restore registers saved on stack by KERNAL
+	PLA			; Pop Y
+	TAY
+	PLA			; Pop X
+	TAX
+	PLA			; Pop A
+	RTI			; Return from interrupt
 
 ;-----------------------------------------------------------------------
 ; Bit-banged serial sample (Called at 3x baud rate)
@@ -114,6 +173,8 @@ SERSAMP	SUBROUTINE
 	INC	SERCNT
 	RTS
 	
+	
+;-----------------------------------------------------------------------
 ; Do a Rx sample
 SERRX	SUBROUTINE
 	JSR	SAMPRX		; Sample the Rx line
@@ -178,7 +239,7 @@ SERRX	SUBROUTINE
 	
 	
 
-
+;-----------------------------------------------------------------------
 ; Do a Tx sample event
 SERTX	SUBROUTINE
 	LDA	TXSTATE
@@ -244,17 +305,25 @@ SERTX	SUBROUTINE
 	RTS
 	
 	
+
+
+;#######################################################################
+; Device dependent routines
+;-----------------------------------------------------------------------
+; May need to be modified depending on hardware used
+;#######################################################################
 	
 	
 	
+;-----------------------------------------------------------------------
 ; Sample the Rx pin into RXSAMP
 ; 1 for high, 0 for low
-; NOTE: If we want to support inverse serial do it in here, and SERTX
+; NOTE: If we want to support inverse serial do it in here, and SETTX
 SAMPRX	SUBROUTINE
 	
 	RTS
 
-
+;-----------------------------------------------------------------------
 ; Set Tx pin to value in A
 SETTX	SUBROUTINE
 	
