@@ -21,6 +21,9 @@
 
 ;-----------------------------------------------------------------------
 ; Zero page definitions
+; TODO: Should we move this to program memory so we don't overwrite
+;  any BASIC variables? Then we don't have to worry about using KERNAL
+;  routines as much.
 ;-----------------------------------------------------------------------
 	SEG.U	ZPAGE
 	RORG	$0
@@ -96,7 +99,7 @@ BAS1_VECT_BRK  EQU	$0216	; 216/217 - BRK vector
 	ORG	$0401           ; For PET 2001 
 	; I saw that the PET 2001 with BASIC 1.0 might need to be loaded at $400
 	; instead of $401? Confirm?
-
+	
 
 
 ;-----------------------------------------------------------------------
@@ -121,6 +124,7 @@ BLDR_ENDL
 ;-----------------------------------------------------------------------
 ; Initialization
 INIT	SUBROUTINE
+	SEI			; Disable interrupts
 	; We never plan to return to BASIC, steal everything!
 	LDX	#FF		; Set start of stack
 	TXS			; Set stack pointer to top of stack
@@ -134,11 +138,30 @@ INIT	SUBROUTINE
 	; Set VIA interrupts so that our timer is the only interrupt source
 	
 	; Install IRQ
+	LDA	#<SOUND_IRQ
+	LDX	#>SOUND_IRQ
+	STA	BAS1_VECT_IRQ	; Modify based on BASIC version
+	STX	BAS1_VECT_IRQ+1
 	
+	; Initialize state
+	LDA	#STSTART
+	STA	RXSTATE
+	LDA	#STRDY
+	STA	TXSTATE
+	
+	EOR	A		; LDA #0
+	STA	SERCNT
+	STA	TXTGT		; Fire Immediatly
+	STA	RXTGT		; Fire immediatly
+	STA	RXNEW		; No bytes ready
+	STA	TXNEW		; No bytes ready
 	; Fall into START
 ;-----------------------------------------------------------------------
 ; Start of program (after INIT called)
 START	SUBROUTINE
+	
+
+
 
 
 
