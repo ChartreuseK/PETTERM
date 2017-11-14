@@ -84,6 +84,8 @@ CURLOC	DS.W	1		; Pointer to current screen location
 
 TMP	DS.B	1	
 TMP2	DS.B	1
+
+	RORG	$90
 ; Make sure not to use $90-95	, Vectors for BASIC 2+
 	REND
 ;-----------------------------------------------------------------------
@@ -185,6 +187,9 @@ BLDR_ENDL
 ; Initialization
 INIT	SUBROUTINE
 	SEI			; Disable interrupts
+	
+	; Clear ZP?
+	
 	; We never plan to return to BASIC, steal everything!
 	LDX	#$FF		; Set start of stack
 	TXS			; Set stack pointer to top of stack
@@ -248,11 +253,16 @@ INIT	SUBROUTINE
 	; Set-up screen
 	JSR	CLRSCR
 	
+	LDA	#0
+	STA	VIA_TIM1L
+	STA	VIA_TIM1H	; Need to clear high before writing latch
+				; Otherwise it seems to fail half the tile?
 	LDX	BAUD
 	LDA	BAUDTBLL,X
 	STA	VIA_TIM1LL
 	LDA	BAUDTBLH,X
 	STA	VIA_TIM1HL
+	
 	
 	; Fall into START
 ;-----------------------------------------------------------------------
@@ -264,15 +274,10 @@ START	SUBROUTINE
 	CLI	; Enable interrupts
 	
 HALT	
-	JMP	HALT
-	NOP
-	CLI
-	NOP
 	LDA	TXNEW
 	BNE	HALT
 	LDA	#'T
 	STA	TXBYTE
-	JSR	PUTCH
 	LDA	#$FF
 	STA	TXNEW
 	JMP	HALT
@@ -301,6 +306,12 @@ IRQHDLR	SUBROUTINE
 	; (ie. We've set it up right)
 	LDA	VIA_TIM1L	; Acknowlege the interrupt
 	JSR	SERSAMP		; Do our sampling
+	INC	TMP
+	LDA	TMP
+	CMP	#10		; 10 bits
+	BNE	IRQEXIT
+	LDA	#0
+	STA	TMP
 	LDA	#'T
 	JSR	PUTCH
 IRQEXIT
