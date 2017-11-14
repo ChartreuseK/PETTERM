@@ -97,7 +97,7 @@ STSTART	EQU	0		; Waiting/Sending for start bit
 STRDY	EQU	1		; Ready to start sending
 STBIT	EQU	2		; Sending/receiving data
 STSTOP	EQU	3		; Sending/receiving stop bit
-
+STIDLE	EQU	4
 
 BITCNT	EQU	8		; 8-bit bytes to recieve
 BITMSK	EQU	$FF		; No mask
@@ -236,8 +236,11 @@ INIT	SUBROUTINE
 	; Initialize state
 	LDA	#STSTART
 	STA	RXSTATE
-	LDA	#STRDY
+	LDA	#STIDLE		; Output 1 idle tone first
 	STA	TXSTATE
+	
+	LDA	#1
+	JSR	SETTX		; Make sure we're outputting idle tone
 	
 	LDA	#0
 	STA	SERCNT
@@ -245,6 +248,7 @@ INIT	SUBROUTINE
 	STA	RXTGT		; Fire immediatly
 	STA	RXNEW		; No bytes ready
 	STA	TXNEW		; No bytes ready
+	
 	
 	STA	CURLOC
 	LDA	#$80
@@ -264,6 +268,7 @@ INIT	SUBROUTINE
 	STA	VIA_TIM1HL
 	
 	
+	
 	; Fall into START
 ;-----------------------------------------------------------------------
 ; Start of program (after INIT called)
@@ -278,6 +283,7 @@ HALT
 	BNE	HALT
 	LDA	#'T
 	STA	TXBYTE
+	JSR	PUTCH
 	LDA	#$FF
 	STA	TXNEW
 	JMP	HALT
@@ -306,14 +312,7 @@ IRQHDLR	SUBROUTINE
 	; (ie. We've set it up right)
 	LDA	VIA_TIM1L	; Acknowlege the interrupt
 	JSR	SERSAMP		; Do our sampling
-	INC	TMP
-	LDA	TMP
-	CMP	#10		; 10 bits
-	BNE	IRQEXIT
-	LDA	#0
-	STA	TMP
-	LDA	#'T
-	JSR	PUTCH
+	
 IRQEXIT
 	; Restore registers saved on stack by KERNAL
 	PLA			; Pop Y
@@ -331,6 +330,7 @@ SERSAMP	SUBROUTINE
 	BNE	.trytx
 	JSR	SERRX
 .trytx
+	LDA	SERCNT
 	CMP	TXTGT
 	BNE	.end
 	JSR	SERTX
@@ -416,24 +416,32 @@ SERTX	SUBROUTINE
 	BEQ	.datab
 	CMP	#STSTOP
 	BEQ	.stop
+	CMP	#STIDLE
+	BEQ	.idle
 	; Invalid state
 	LDA	#STRDY
 	STA	TXSTATE
 	JMP	.ready		; Treat as ready state
+.idle	; Force idle for 1 baud period
+	LDA	#1
+	JSR	SETTX		; Idle
+	LDA	#STRDY
+	STA	TXSTATE
+	JMP	.next3		
 .stop	; Send stop bit
 	LDA	#0
 	JSR	SETTX		; Send stop bit
-	LDA	#STRDY
+	LDA	#STIDLE
 	STA	TXSTATE
 	JMP	.next3		; Change this if we want to change 
 				; the stop bit length (3 = 1 bit, 6 = 2 bits)
 .datab	; Send data bit
 	LDA	#0
-	ROL	TXCUR		; Rotate current bit into carry
+	ROR	TXCUR		; Rotate current bit into carry
 	ROL			; Place into A
 	JSR	SETTX
-	INC	RXBIT
-	LDA	RXBIT
+	INC	TXBIT
+	LDA	TXBIT
 	CMP	#BITCNT
 	BNE	.next3		; If more bits to go
 	LDA	#STSTOP
@@ -453,14 +461,14 @@ SERTX	SUBROUTINE
 	JSR	SETTX		; Idle state
 	
 	LDA	TXNEW		; Check if we have a byte waiting to send
-	BPL	.next1		; If not check again next sample		
+	BPL	.next3		; If not check again next baud		
 	LDA	TXBYTE
 	STA	TXCUR		; Copy byte to read
 	LDA	#0
 	STA	TXNEW		; Reset new flag
 	LDA	#STSTART	
 	STA	TXSTATE
-	JMP	.next1		; Start sending next sample period
+	;JMP	.next1		; Start sending next sample period
 .next3	
 	INC	TXTGT
 .next2
@@ -498,11 +506,12 @@ SETTX	SUBROUTINE
 	CMP	#0
 	BEQ	.low		; BEQ for normal, BNE for 'inverted'
 	LDA	VIA_PCR
-	ORA	$20		; Make bit 5 high
+	ORA	#$20		; Make bit 5 high
+	STA	VIA_PCR
 	RTS
 .low
 	LDA	VIA_PCR
-	AND	$DF		; Make bit 5 low
+	AND	#$DF		; Make bit 5 low
 	STA	VIA_PCR
 	RTS
 
