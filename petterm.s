@@ -377,6 +377,7 @@ SERRX	SUBROUTINE
 	LDA	RXCUR
 	ORA	RXSAMP		; Or in current bit
 	EOR	#$01		; Invert bit
+	STA	RXCUR
 	INC	RXBIT
 	LDA	RXBIT
 	CMP	#BITCNT		; Check if we've read our last bit
