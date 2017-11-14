@@ -122,15 +122,13 @@ VIA_PCR    EQU  $E84C
 
 VIA_IFR    EQU	$E84D		; Interrupt flag register
 VIA_IER    EQU	$E84E		; Interrupt enable register
-
-
 VIA_PORTA  EQU	$E84F		; User-port without CA2 handshake
 
 
-PIA1_CRA   EQU  $e811
-PIA1_CRB   EQU  $e813
-PIA2_CRA   EQU  $e821
-PIA2_CRB   EQU  $e823
+PIA1_CRA   EQU  $E811
+PIA1_CRB   EQU  $E813
+PIA2_CRA   EQU  $E821
+PIA2_CRB   EQU  $E823
 
 SCRMEM     EQU	$8000		; Start of screen memory
 SCREND	   EQU	SCRMEM+(SCRCOL*SCRROW) ; End of screen memory
@@ -192,27 +190,31 @@ INIT	SUBROUTINE
 	TXS			; Set stack pointer to top of stack
 	
 	; Determine which version of BASIC we have for a KERNAL
-	; TODO: What's a reliale way? Maybe probe for a byte that's
+	; TODO: What's a reliable way? Maybe probe for a byte that's
 	; different in each version. Find such a byte using emulators.
+	
 	
 	
 	; Set timer to 3x desired initial baud rate
 	LDA	#$01		; 300 baud
 	STA	BAUD
 	
-	LDX	BAUD
-	LDA	BAUDTBLL,X
-	STA	VIA_TIM1LL
-	LDA	BAUDTBLH,X
-	STA	VIA_TIM1HL
-	
 	
 	LDA	PIA1_CRB
-	AND	#$F6		; Disable interrupts (60hz retrace int)
+	AND	#$FE		; Disable interrupts (60hz retrace int?)
 	STA	PIA1_CRB	
+	LDA	PIA1_CRA
+	AND	#$FE
+	STA	PIA1_CRA	; Disable interrupts
+	
+	LDA	PIA2_CRB
+	AND	#$FE		; Disable interrupts (60hz retrace int?)
+	STA	PIA2_CRB	
+	LDA	PIA2_CRA
+	AND	#$FE
+	STA	PIA2_CRA	; Disable interrupts
 	
 	
-	JSR	INITVIA
 	
 	; Install IRQ
 	LDA	#<IRQHDLR
@@ -221,6 +223,10 @@ INIT	SUBROUTINE
 	STX	BAS1_VECT_IRQ+1
 	STA	BAS4_VECT_IRQ	; Let's see if we can get away with modifying
 	STX	BAS4_VECT_IRQ+1	; both versions vectors
+	
+	
+	JSR	INITVIA
+	
 	
 	; Initialize state
 	LDA	#STSTART
@@ -242,6 +248,12 @@ INIT	SUBROUTINE
 	; Set-up screen
 	JSR	CLRSCR
 	
+	LDX	BAUD
+	LDA	BAUDTBLL,X
+	STA	VIA_TIM1LL
+	LDA	BAUDTBLH,X
+	STA	VIA_TIM1HL
+	
 	; Fall into START
 ;-----------------------------------------------------------------------
 ; Start of program (after INIT called)
@@ -251,17 +263,20 @@ START	SUBROUTINE
 	
 	CLI	; Enable interrupts
 	
-	
-	
 HALT	
-	LDA	RXNEW
-	BEQ	HALT
-	LDA	#0
-	STA	RXNEW
-	LDA	RXBYTE
-	JSR	PUTCH
-	
 	JMP	HALT
+	NOP
+	CLI
+	NOP
+	LDA	TXNEW
+	BNE	HALT
+	LDA	#'T
+	STA	TXBYTE
+	JSR	PUTCH
+	LDA	#$FF
+	STA	TXNEW
+	JMP	HALT
+
 
 
 ;-----------------------------------------------------------------------
@@ -286,10 +301,9 @@ IRQHDLR	SUBROUTINE
 	; (ie. We've set it up right)
 	LDA	VIA_TIM1L	; Acknowlege the interrupt
 	JSR	SERSAMP		; Do our sampling
-	
+	LDA	#'T
+	JSR	PUTCH
 IRQEXIT
-	;LDA	VIA_TIM1L	; Acknowlege the interrupt
-	STA	VIA_TIM1H
 	; Restore registers saved on stack by KERNAL
 	PLA			; Pop Y
 	TAY
@@ -304,11 +318,11 @@ SERSAMP	SUBROUTINE
 	LDA	SERCNT
 	CMP	RXTGT		; Check if we're due for the next Rx event
 	BNE	.trytx
-	;JSR	SERRX
+	JSR	SERRX
 .trytx
 	CMP	TXTGT
 	BNE	.end
-	;JSR	SERTX
+	JSR	SERTX
 .end
 	INC	SERCNT
 	RTS
@@ -492,8 +506,8 @@ INITVIA SUBROUTINE
 	LDA	#$EC		; Tx as output high, uppercase+graphics ($EE for lower)
 	STA	VIA_PCR		
 	; Set VIA interrupts so that our timer is the only interrupt source
-	; This should also disable the CA1 60Hz interrupt. We don't care
-	; about the jiffies. (I hope)
+	LDA	#$7F		; Clear all interrupt flags
+	STA	VIA_IER
 	LDA	#$C0		; Enable VIA interrupt and Timer 1 interrupt
 	STA	VIA_IER
 	RTS
