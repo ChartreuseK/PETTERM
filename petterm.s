@@ -82,8 +82,10 @@ ROW	DS.B	1
 
 CURLOC	DS.W	1		; Pointer to current screen location
 
-TMP	DS.B	1	
+TMP1	DS.B	1	
 TMP2	DS.B	1
+
+TMPA	DS.W	1
 
 	RORG	$90
 ; Make sure not to use $90-95	, Vectors for BASIC 2+
@@ -248,7 +250,8 @@ INIT	SUBROUTINE
 	STA	RXTGT		; Fire immediatly
 	STA	RXNEW		; No bytes ready
 	STA	TXNEW		; No bytes ready
-	
+	STA	ROW
+	STA	COL
 	
 	STA	CURLOC
 	LDA	#$80
@@ -278,6 +281,18 @@ START	SUBROUTINE
 	
 	CLI	; Enable interrupts
 	
+	; Echo back any recieved character, and print to the screen
+;ECHOL
+;	LDA	RXNEW
+;	BEQ	ECHOL		; Wait for a character
+;	LDA	RXBYTE
+;	STA	TXBYTE
+;	JSR	PUTCH
+;	LDA	#$FF
+;	STA	TXNEW
+;	JMP	ECHOL
+	
+	; Test code, just spam out the letter T as fast as possible
 HALT	
 	LDA	TXNEW
 	BNE	HALT
@@ -287,13 +302,356 @@ HALT
 	LDA	#$FF
 	STA	TXNEW
 	JMP	HALT
+	
+	
+; Get a character from the serial port (blocking)
+GETCH	SUBROUTINE
+	LDA	RXNEW
+	BEQ	GETCH		; Loop till we get a character in
+	LDA	#$0
+	STA	RXNEW		; Acknowledge byte
+	LDA	RXBYTE
+	RTS
+	
+;-----------------------------------------------------------------------
+; Parse character and handle it
+; Ch in A
+PARSECH	SUBROUTINE
+	CMP	#$20
+	BCS	.normal
+	CMP	#$0A
+	BEQ	.nl
+	CMP	#$0D
+	BEQ	.cr
+	CMP	#$1B
+	BEQ	DOESC
+	CMP	#$09
+	BEQ	.tab
+	CMP	#$08
+	BEQ	.bksp
+	; Ignore other ctrl characters for now
+	RTS
+		
+.bksp
+	LDA	#-1
+	JSR	ADDCURLOC
+	LDA	COL
+	CMP	#0
+	BNE	.bkspnw
+	LDA	ROW
+	CMP	#0
+	BEQ	.bkspnw
+	DEC	ROW
+	LDA	#COLMAX-1
+	STA	COL
+.bkspnw
+	RTS
+.tab	
+	; Increment COL to next multiple of 8
+	LDA	COL
+	AND	#$F8		
+	CLC
+	ADC	#8
+	CMP	#COLMAX
+	LDA	#0
+	STA	COL
+	BCS	.nl	
+.tabnw
+	STA	COL
+	TAX
+	LDY	ROW
+	JMP	GOTOXY
+	
+.cr
+	LDX	0
+	LDY	COL
+	JMP	GOTOXY
+.nl
+	INC	ROW
+	LDY	ROW
+	CPY	#ROWMAX
+	BNE	.tabnw
+	JSR	SCROLL
+	LDY	#ROWMAX-1
+	STY	ROW
+	LDX	COL
+	JMP	GOTOXY
+	
+.normal
+	JMP	PUTCH		; Tail call into PUTCH
+
+; Escape code handling
+; Move variables to ZP space
+PARSTKL	EQU	4		; Allow up to 4 arguments
+PARSTK	DS.B	PARSTKL		
+
+DOESC	SUBROUTINE	
+	JSR	GETCH		; Read next character
+	CMP	#'[		
+	BEQ	.csi		; Handle control sequence
+	RTS			; Otherwise ignore sequence
+.csi	; Esc [
+	LDA	#0
+	LDX	#PARSTKL
+.clrstk
+	STA	PARSTK,X	; Clear parameter stack
+	DEX
+	BNE	.clrstk		; X is left at 0 for the stk pointer
+.csiloop
+	JSR	GETCH		; Next char
+	CMP	#$40
+	BCS	.final		; Final character byte
+	CMP	#$30
+	BCS	.param		; Parameter byte
+	CMP	#$20
+	BCS	.inter		; Intermediary byte (No param must follow)
+	; Invalid CSI sequence, abort
+	RTS
+.inter
+	; Ignore intermediate bytes for now
+	JMP	.csiloop
+.param
+	CMP	#':
+	BCC	.digit		; 0-9 ascii
+	CMP	#';
+	BEQ	.sep		; Seperator
+	; Otherwise ignore
+	BNE	.csiloop
+.sep
+	INX			; Increment stack
+	CPX	PARSTKL
+	BCC	.csiloop
+	DEX			; Don't overflow, overwrite last
+	JMP	.csiloop
+.digit
+	SEC
+	SBC	#'0		; Convert to digit
+	; Multiply previous by 10 and add digit to it
+	LDY	#10
+.digmul
+	ADC	PARSTK,X
+	DEY
+	BNE	.digmul
+	STA	PARSTK,X
+	JMP	.csiloop
+	
+.final	; Final byte of CSI sequence. Do it!
+	LDY	PARSTK+0	; Preload first stack arg into Y
+	CMP	#'A
+	BEQ	.cup
+	CMP	#'B
+	BEQ	.cdn
+	CMP	#'C
+	BEQ	.cfw
+	CMP	#'D
+	BEQ	.cbk
+	CMP	#'H
+	BEQ	.cpos		; Position the cursor to X;Y
+	CMP	#'J
+	BEQ	.eras		; Erase display
+	; Add more here as needed
+	; Otherwise ignore sequence
+	RTS
+.cup
+	CPY	#0		; If zero
+	BNE	.cupl
+	INY			; Make 1 instead
+.cupl
+	JSR	CURSUP
+	DEY
+	BNE	.cupl
+	RTS
+.cdn
+	CPY	#0		; If zero
+	BNE	.cdnl
+	INY			; Make 1 instead
+.cdnl
+	JSR	CURSDN
+	DEY
+	BNE	.cdnl
+	RTS
+.cfw
+	CPY	#0		; If zero
+	BNE	.cfwl
+	INY			; Make 1 instead
+.cfwl
+	JSR	CURSL
+	DEY
+	BNE	.cfwl
+	RTS
+.cbk
+	CPY	#0		; If zero
+	BNE	.cbkl
+	INY			; Make 1 instead
+.cbkl
+	JSR	CURSR
+	DEY
+	BNE	.cbkl
+	RTS
 
 
+.cpos
+	LDX	PARSTK+0
+	LDY	PARSTK+1
+	JMP	GOTOXY
+
+.eras	; Erase part or all of the screen
+	CPY	#0
+	BEQ	.erasf
+	CPY	#1
+	BEQ	.erasb
+	; Otherwise clear all
+	JMP	CLRSCR		; Tail call
+.erasf
+	; Erase to start of screen
+	LDA	CURLOC
+	STA	TMPA
+	LDA	CURLOC+1
+	STA	TMPA+1
+	LDA	#0
+	STA	CURLOC
+	LDA	#$80
+	STA	CURLOC+1
+.erasfl
+	LDA	#$20
+	JSR	PUTCH		; Lazy and slow way to clear from start to here
+	LDA	CURLOC+1
+	CMP	TMPA+1
+	BNE	.erasfl
+	LDA	CURLOC
+	CMP	TMPA
+	BNE	.erasfl
+	RTS
+	
+.erasb
+	; Erase to end of screen
+	LDA	CURLOC
+	STA	TMPA
+	LDA	CURLOC+1
+	STA	TMPA+1
+.erasbl
+	LDA	#$20
+	JSR	PUTCH		; Lazy and slow way to clear to end
+	LDA	CURLOC+1
+	CMP	#>(SCREND-1)
+	BNE	.erasbl
+	LDA	CURLOC
+	CMP	#<(SCREND-1)
+	BNE	.erasbl
+	; We need to write the last location
+	LDA	#$20
+	STA	SCREND
+	LDA	TMPA		; Restore CURLOC
+	STA	CURLOC
+	LDA	TMPA+1
+	STA	CURLOC
+	RTS
+	
+; Cursor movement
+CURSUP	SUBROUTINE
+	LDA	ROW
+	CMP	#0
+	BEQ	CURNONE
+	DEC	ROW
+	LDA	#-SCRCOL	; Subtract one row
+	JMP	ADDCURLOC
+CURSDN
+	LDA	ROW
+	CMP	#ROWMAX-1
+	BEQ	CURNONE
+	INC	ROW
+	LDA	#SCRCOL		; Add one row
+	JMP	ADDCURLOC
+CURSL
+	LDA	COL
+	CMP	#0
+	BEQ	CURNONE
+	DEC	COL
+	LDA	#-1
+	JMP	ADDCURLOC
+CURSR
+	LDA	COL
+	CMP	#COLMAX-1
+	BEQ	CURNONE
+	DEC	COL
+	LDA	#1
+	JMP	ADDCURLOC
+CURNONE
+	RTS
+
+
+; X - column
+; Y - row
+GOTOXY		SUBROUTINE
+	STX	CURLOC
+	LDA	#$80
+	STA	CURLOC+1
+	CPY	#0
+	BEQ	.done
+.rowl
+	LDA	CURLOC
+	CLC
+	ADC	#SCRCOL		; Add one row
+	STA	CURLOC
+	LDA	CURLOC+1
+	ADC	#0
+	STA	CURLOC+1
+	DEY
+	BNE	.rowl
+.done
+	RTS
+	
+	
+
+; Add sign-extended A to CURLOC	
+; If CURLOC+A exceeds screen then don't change
+ADDCURLOC	SUBROUTINE
+	TAX
+	ADC	CURLOC
+	STA	CURLOC
+	TXA
+	ORA	#$7F		; Sign extend A
+	BMI	.minus
+	LDA	#0
+.minus				; Sign extended A now in A
+	ADC	CURLOC+1	; Add to upper byte
+	STA	CURLOC+1
+	
+	; Check if we fit
+	TXA			; Restore A
+	EOR	#$FF		; Invert
+	SEC			; Add 1
+	ADC	#0		; (Negate A)
+	JSR	CHKBOUNDS
+	BCS	ADDCURLOC	; If out of bounds, invert add
+	RTS
+	
+
+CHKBOUNDS	SUBROUTINE
+	; Check if before the screen
+	LDA	CURLOC+1
+	CMP	#$80		; Start of screen is $8000
+	BCC	.fail
+	CMP	#>SCREND	; Past end of screen
+	BEQ	.testlow	; Test low byte if high is the end
+	BCS	.fail		
+.pass
+	CLC
+	RTS
+.testlow
+	LDA	CURLOC
+	CMP	#(<SCREND)+1
+	BCC	.pass		
+.fail
+	SEC
+	RTS
+	
+	
 
 ;-----------------------------------------------------------------------
 ; Static data
 
-; Baud rate timer values
+; Baud rate timer values, 3x the baud rate
 ;		 110  300  600 1200 2400 4800 9600
 BAUDTBLL 
 	DC.B	$D6, $57, $2c, $16, $8B, $45, $23
@@ -551,6 +909,10 @@ CLRSCR	SUBROUTINE
 	STA	SCRMEM+256,X
 	STA	SCRMEM+512,X
 	STA	SCRMEM+768,X
+	STA	SCRMEM+1024,X	; Clear the extra 1024 bytes on 80 col pets
+	STA	SCRMEM+1280,X
+	STA	SCRMEM+1536,X
+	STA	SCRMEM+1792,X
 	DEX
 	BNE	.loop
 	RTS
@@ -607,6 +969,9 @@ SCROLL	SUBROUTINE
 	DEX
 	BNE	.clrloop
 	RTS
+	
+	
+
 
 ;-----------------------------------------------------------------------
 ; Write a character to the current position
@@ -622,15 +987,27 @@ PUTCH	SUBROUTINE
 	LDA	#0
 	ADC	CURLOC+1
 	STA	CURLOC+1
-
+	
+	INC	COL
+	LDA	COL
+	CMP	#COLMAX
+	BCC	.nowrap
+	LDA	#0
+	STA	COL
+	INC	ROW
+.nowrap
 	; Check if we wrote the character in the bottom right
 	; and need to scroll the screen
-	LDA	#<(SCREND)
-	CMP	CURLOC
-	BNE	.done
-	LDA	#>(SCREND)
-	CMP	CURLOC+1
-	BNE	.done
+	LDA	ROW
+	CMP	#ROWMAX
+	BCC	.done
+	DEC	ROW
+		;LDA	#<(SCREND)
+		;CMP	CURLOC
+		;BNE	.done
+		;LDA	#>(SCREND)
+		;CMP	CURLOC+1
+		;BNE	.done
 	; Need to scroll
 	JSR	SCROLL
 	; Move cursor to bottom left
