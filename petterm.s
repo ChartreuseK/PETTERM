@@ -86,6 +86,7 @@ TMP1	DS.B	1
 TMP2	DS.B	1
 
 TMPA	DS.W	1
+TMPA2	DS.W	1
 
 	RORG	$90
 ; Make sure not to use $90-95	, Vectors for BASIC 2+
@@ -276,23 +277,74 @@ INIT	SUBROUTINE
 ;-----------------------------------------------------------------------
 ; Start of program (after INIT called)
 START	SUBROUTINE
-	LDA	#'@
-	JSR	PUTCH
 	
 	CLI	; Enable interrupts
+RES
+	LDA	#<BUF
+	STA	TMPA2
+	LDA	#>BUF
+	STA	TMPA2+1
+L1
+	JSR	GETCH
+	BEQ	END
+	JSR	PARSECH
 	
-	; Echo back any recieved character, and print to the screen
-;ECHOL
-;	LDA	RXNEW
-;	BEQ	ECHOL		; Wait for a character
-;	LDA	RXBYTE
-;	STA	TXBYTE
-;	JSR	PUTCH
-;	LDA	#$FF
-;	STA	TXNEW
-;	JMP	ECHOL
+
 	
+	JSR	DLY
+	
+	JMP	L1
+	
+END
+	JSR	DLY
+	JSR	DLY
+	JSR	DLY
+	JMP	RES
+	
+	
+BUF	
+	DC.B	27,"[H",27,"[2J"
+	dc.b	"1234567890",13,10,"2",13,10,"3",13,10,"4",13,10,"5",13,10
+	DC.B	"6",13,10,"7",13,10,"8",13,10,"9",13,10,"0",13,10
+	DC.B	27,"[10;10H!!",10,13,"@@@"
+	DC.B	27,"[2;2HHI"
+	DC.B	27,"[0J1"
+	DC.B	27,"[4B2"
+	DC.B	27,"[10C3"
+	DC.B	27,"[3D4"
+	DC.B	27,"[6A5"
+	DC.B	27,"[24;33HWorld!"
+	DC.B	0
+	
+	DC.B	"Hi",9,"PET!",13,10,"Hi",8,8,"BYE",13,10
+	DC.B 	"W",8,8,8,"123"
+	DC.B	13,10,"1"
+	
+GETBUF
+	LDX	#0
+	LDA	(TMPA2,X)
+	TAX
+	LDA	#1
+	CLC
+	ADC	TMPA2
+	STA	TMPA2
+	LDA	#0
+	ADC	TMPA2+1
+	STA	TMPA2+1
+	TXA
+	RTS
+
+DLY
+	LDX	#0
+	LDY	#40
+DLY1
+	DEX	
+	BNE	DLY1
+	DEY
+	BNE	DLY1
+	RTS
 	; Test code, just spam out the letter T as fast as possible
+	
 HALT	
 	LDA	TXNEW
 	BNE	HALT
@@ -306,6 +358,15 @@ HALT
 	
 ; Get a character from the serial port (blocking)
 GETCH	SUBROUTINE
+	TXA
+	PHA
+	JSR	GETBUF	;TMP testing
+	TAY
+	PLA
+	TAX
+	TYA
+	RTS
+	
 	LDA	RXNEW
 	BEQ	GETCH		; Loop till we get a character in
 	LDA	#$0
@@ -335,16 +396,19 @@ PARSECH	SUBROUTINE
 .bksp
 	LDA	#-1
 	JSR	ADDCURLOC
+	
 	LDA	COL
 	CMP	#0
 	BNE	.bkspnw
 	LDA	ROW
 	CMP	#0
-	BEQ	.bkspnw
+	BEQ	.bkspnw2
 	DEC	ROW
-	LDA	#COLMAX-1
+	LDA	#COLMAX
 	STA	COL
 .bkspnw
+	DEC	COL
+.bkspnw2
 	RTS
 .tab	
 	; Increment COL to next multiple of 8
@@ -352,27 +416,29 @@ PARSECH	SUBROUTINE
 	AND	#$F8		
 	CLC
 	ADC	#8
+	STA	COL
 	CMP	#COLMAX
-	LDA	#0
-	STA	COL
-	BCS	.nl	
-.tabnw
-	STA	COL
+	BCS	.tabw	
 	TAX
 	LDY	ROW
 	JMP	GOTOXY
+.tabw
+	LDA	#0
+	STA	COL
+	JMp	.nl
 	
 .cr
-	LDX	0
-	LDY	COL
+	LDX	#0
+	LDY	ROW
 	JMP	GOTOXY
 .nl
 	INC	ROW
 	LDY	ROW
 	CPY	#ROWMAX
-	BNE	.tabnw
+	BNE	.nlrow
 	JSR	SCROLL
 	LDY	#ROWMAX-1
+.nlrow
 	STY	ROW
 	LDX	COL
 	JMP	GOTOXY
@@ -394,7 +460,7 @@ DOESC	SUBROUTINE
 	LDA	#0
 	LDX	#PARSTKL
 .clrstk
-	STA	PARSTK,X	; Clear parameter stack
+	STA	PARSTK-1,X	; Clear parameter stack
 	DEX
 	BNE	.clrstk		; X is left at 0 for the stk pointer
 .csiloop
@@ -403,6 +469,7 @@ DOESC	SUBROUTINE
 	BCS	.final		; Final character byte
 	CMP	#$30
 	BCS	.param		; Parameter byte
+	
 	CMP	#$20
 	BCS	.inter		; Intermediary byte (No param must follow)
 	; Invalid CSI sequence, abort
@@ -419,7 +486,7 @@ DOESC	SUBROUTINE
 	BNE	.csiloop
 .sep
 	INX			; Increment stack
-	CPX	PARSTKL
+	CPX	#PARSTKL
 	BCC	.csiloop
 	DEX			; Don't overflow, overwrite last
 	JMP	.csiloop
@@ -428,7 +495,9 @@ DOESC	SUBROUTINE
 	SBC	#'0		; Convert to digit
 	; Multiply previous by 10 and add digit to it
 	LDY	#10
+	
 .digmul
+	CLC
 	ADC	PARSTK,X
 	DEY
 	BNE	.digmul
@@ -475,7 +544,7 @@ DOESC	SUBROUTINE
 	BNE	.cfwl
 	INY			; Make 1 instead
 .cfwl
-	JSR	CURSL
+	JSR	CURSR
 	DEY
 	BNE	.cfwl
 	RTS
@@ -484,15 +553,21 @@ DOESC	SUBROUTINE
 	BNE	.cbkl
 	INY			; Make 1 instead
 .cbkl
-	JSR	CURSR
+	JSR	CURSL
 	DEY
 	BNE	.cbkl
 	RTS
 
 
 .cpos
-	LDX	PARSTK+0
-	LDY	PARSTK+1
+	LDX	PARSTK+1
+	BEQ	.cposnx		; Convert from 1 based to 0 based
+	DEX
+.cposnx
+	LDY	PARSTK+0
+	BEQ	.cposny		; Convert from 1 based to 0 based
+	DEY
+.cposny
 	JMP	GOTOXY
 
 .eras	; Erase part or all of the screen
@@ -502,69 +577,80 @@ DOESC	SUBROUTINE
 	BEQ	.erasb
 	; Otherwise clear all
 	JMP	CLRSCR		; Tail call
-.erasf
+.erasb
 	; Erase to start of screen
-	LDA	CURLOC
+	LDA	CURLOC		; Save current CURLOC into TMPA
 	STA	TMPA
 	LDA	CURLOC+1
 	STA	TMPA+1
+	
 	LDA	#0
 	STA	CURLOC
+	STA	ROW		; Reset CURLOC and ROW/COL to start of screen
+	STA	COL
 	LDA	#$80
 	STA	CURLOC+1
-.erasfl
+.erasbl
 	LDA	#$20
 	JSR	PUTCH		; Lazy and slow way to clear from start to here
 	LDA	CURLOC+1
 	CMP	TMPA+1
-	BNE	.erasfl
+	BNE	.erasbl
 	LDA	CURLOC
 	CMP	TMPA
-	BNE	.erasfl
+	BNE	.erasbl
 	RTS
 	
-.erasb
+.erasf
 	; Erase to end of screen
 	LDA	CURLOC
 	STA	TMPA
 	LDA	CURLOC+1
 	STA	TMPA+1
-.erasbl
+	LDA	COL		; Save ROW and COL
+	PHA
+	LDA	ROW
+	PHA
+.erasfl
 	LDA	#$20
 	JSR	PUTCH		; Lazy and slow way to clear to end
 	LDA	CURLOC+1
 	CMP	#>(SCREND-1)
-	BNE	.erasbl
+	BNE	.erasfl
 	LDA	CURLOC
 	CMP	#<(SCREND-1)
-	BNE	.erasbl
+	BNE	.erasfl
 	; We need to write the last location
 	LDA	#$20
 	STA	SCREND
+	
+	PLA			; Restore ROw and COL
+	STA	ROW
+	PLA	
+	STA	COL
+	
 	LDA	TMPA		; Restore CURLOC
 	STA	CURLOC
 	LDA	TMPA+1
-	STA	CURLOC
+	STA	CURLOC+1
 	RTS
 	
 ; Cursor movement
 CURSUP	SUBROUTINE
 	LDA	ROW
-	CMP	#0
 	BEQ	CURNONE
 	DEC	ROW
-	LDA	#-SCRCOL	; Subtract one row
+	LDA	#-(SCRCOL)	; Subtract one row
 	JMP	ADDCURLOC
 CURSDN
 	LDA	ROW
 	CMP	#ROWMAX-1
 	BEQ	CURNONE
 	INC	ROW
-	LDA	#SCRCOL		; Add one row
+	LDA	#(SCRCOL)	; Add one row
 	JMP	ADDCURLOC
 CURSL
 	LDA	COL
-	CMP	#0
 	BEQ	CURNONE
 	DEC	COL
 	LDA	#-1
@@ -573,7 +659,7 @@ CURSR
 	LDA	COL
 	CMP	#COLMAX-1
 	BEQ	CURNONE
-	DEC	COL
+	INC	COL
 	LDA	#1
 	JMP	ADDCURLOC
 CURNONE
@@ -584,6 +670,8 @@ CURNONE
 ; Y - row
 GOTOXY		SUBROUTINE
 	STX	CURLOC
+	STX	COL
+	STY	ROW
 	LDA	#$80
 	STA	CURLOC+1
 	CPY	#0
@@ -607,6 +695,7 @@ GOTOXY		SUBROUTINE
 ; If CURLOC+A exceeds screen then don't change
 ADDCURLOC	SUBROUTINE
 	TAX
+	CLC
 	ADC	CURLOC
 	STA	CURLOC
 	TXA
@@ -618,6 +707,7 @@ ADDCURLOC	SUBROUTINE
 	STA	CURLOC+1
 	
 	; Check if we fit
+	RTS
 	TXA			; Restore A
 	EOR	#$FF		; Invert
 	SEC			; Add 1
@@ -989,6 +1079,7 @@ PUTCH	SUBROUTINE
 	STA	CURLOC+1
 	
 	INC	COL
+	
 	LDA	COL
 	CMP	#COLMAX
 	BCC	.nowrap
