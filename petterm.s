@@ -88,7 +88,17 @@ TMP2	DS.B	1
 TMPA	DS.W	1
 TMPA2	DS.W	1
 
+POLLRES	DS.B	1		; KBD Polling interval for baud
+POLLTGT	DS.B	1		; Polling interval counter
+
+KBDBYTE	DS.B	1
+KBDNEW	DS.B	1
+KEY	DS.B	1
+SHIFT	DS.B	1
+
 	RORG	$90
+
+	DS.B	1		; Reserve so we get a compiler error
 ; Make sure not to use $90-95	, Vectors for BASIC 2+
 	REND
 ;-----------------------------------------------------------------------
@@ -130,8 +140,13 @@ VIA_IER    EQU	$E84E		; Interrupt enable register
 VIA_PORTA  EQU	$E84F		; User-port without CA2 handshake
 
 
+PIA1_PA	   EQU	$E810
+PIA1_PB	   EQU	$E812
 PIA1_CRA   EQU  $E811
 PIA1_CRB   EQU  $E813
+
+
+
 PIA2_CRA   EQU  $E821
 PIA2_CRB   EQU  $E823
 
@@ -270,6 +285,9 @@ INIT	SUBROUTINE
 	STA	VIA_TIM1LL
 	LDA	BAUDTBLH,X
 	STA	VIA_TIM1HL
+	LDA	POLLINT,X
+	STA	POLLRES
+	STA	POLLTGT
 	
 	
 	
@@ -279,94 +297,56 @@ INIT	SUBROUTINE
 START	SUBROUTINE
 	
 	CLI	; Enable interrupts
-RES
-	LDA	#<BUF
-	STA	TMPA2
-	LDA	#>BUF
-	STA	TMPA2+1
-L1
-	JSR	GETCH
-	BEQ	END
+
+; Init for GETBUF
+;	LDA	#<BUF
+;	STA	TMPA2
+;	LDA	#>BUF
+;	STA	TMPA2+1
+
+
+.loop
+	LDA	RXNEW
+	BEQ	.norx		; Loop till we get a character in
+	LDA	#$0
+	STA	RXNEW		; Acknowledge byte
+	LDA	RXBYTE
 	JSR	PARSECH
+.norx
+	LDA	KBDNEW
+	BEQ	.nokey
+	LDA	#$0
+	STA	KBDNEW
+	LDA	KBDBYTE
 	
-
-	
-	JSR	DLY
-	
-	JMP	L1
-	
-END
-	JSR	DLY
-	JSR	DLY
-	JSR	DLY
-	JMP	RES
-	
-	
-BUF	
-	DC.B	27,"[H",27,"[2J"
-	dc.b	"1234567890",13,10,"2",13,10,"3",13,10,"4",13,10,"5",13,10
-	DC.B	"6",13,10,"7",13,10,"8",13,10,"9",13,10,"0",13,10
-	DC.B	27,"[10;10H!!",10,13,"@@@"
-	DC.B	27,"[2;2HHI"
-	DC.B	27,"[0J1"
-	DC.B	27,"[4B2"
-	DC.B	27,"[10C3"
-	DC.B	27,"[3D4"
-	DC.B	27,"[6A5"
-	DC.B	27,"[24;33HWorld!"
-	DC.B	0
-	
-	DC.B	"Hi",9,"PET!",13,10,"Hi",8,8,"BYE",13,10
-	DC.B 	"W",8,8,8,"123"
-	DC.B	13,10,"1"
-	
-GETBUF
-	LDX	#0
-	LDA	(TMPA2,X)
-	TAX
-	LDA	#1
-	CLC
-	ADC	TMPA2
-	STA	TMPA2
-	LDA	#0
-	ADC	TMPA2+1
-	STA	TMPA2+1
-	TXA
-	RTS
-
-DLY
-	LDX	#0
-	LDY	#40
-DLY1
-	DEX	
-	BNE	DLY1
-	DEY
-	BNE	DLY1
-	RTS
-	; Test code, just spam out the letter T as fast as possible
-	
-HALT	
-	LDA	TXNEW
-	BNE	HALT
-	LDA	#'T
-	STA	TXBYTE
-	JSR	PUTCH
-	LDA	#$FF
-	STA	TXNEW
-	JMP	HALT
-	
-	
-; Get a character from the serial port (blocking)
-GETCH	SUBROUTINE
-	TXA
+; LOCAL ECHOBACK CODE
 	PHA
-	JSR	GETBUF	;TMP testing
-	TAY
+	JSR	PARSECH		; Local-echoback for now
 	PLA
-	TAX
-	TYA
-	RTS
+	PHA
+	CMP	#$0D		; \r
+	BNE	.noechonl
+	LDA	#$0A
+	JSR	PARSECH
+.noechonl
+	PLA
+; LOCAL ECHOBACK CODE
 	
+	; Check if we can push the byte
+	LDX	TXNEW
+	CPX	#$FF
+	BEQ	.nokey		; Ignore key if one waiting to send
+	STA	TXBYTE
+	LDA	#$FF
+	STA	TXNEW		; Signal to transmit
+.nokey
+	JMP	.loop
+
+
+
+
+; Get a character from the serial port (blocking)
+GETCH	SUBROUTINE	
 	LDA	RXNEW
 	BEQ	GETCH		; Loop till we get a character in
 	LDA	#$0
@@ -394,8 +374,6 @@ PARSECH	SUBROUTINE
 	RTS
 		
 .bksp
-	LDA	#-1
-	JSR	ADDCURLOC
 	
 	LDA	COL
 	CMP	#0
@@ -403,11 +381,15 @@ PARSECH	SUBROUTINE
 	LDA	ROW
 	CMP	#0
 	BEQ	.bkspnw2
+	
+	
 	DEC	ROW
 	LDA	#COLMAX
 	STA	COL
 .bkspnw
 	DEC	COL
+	LDA	#-1
+	JSR	ADDCURLOC
 .bkspnw2
 	RTS
 .tab	
@@ -748,6 +730,12 @@ BAUDTBLL
 BAUDTBLH	
 	DC.B	$0B, $04, $02, $01, $00, $00, $00
 	
+; Poll interval mask for ~60Hz polling based on the baud timer
+	; 	110  300   600 1200 2400 4800  9600 (Baud)
+POLLINT	; 	330  900  1800 2400 4800 9600 19200 (Calls/sec)
+	DC.B	  5,  15,  30,  60, 120, 240, 480
+;Ideal for 60Hz 5.5   15   30   60  120  240  480
+;Poll freq Hz  	66    60   60   60   60   60   60
 ;-----------------------------------------------------------------------
 
 
@@ -780,13 +768,105 @@ SERSAMP	SUBROUTINE
 .trytx
 	LDA	SERCNT
 	CMP	TXTGT
-	BNE	.end
+	BNE	.tryscan
 	JSR	SERTX
-.end
+.tryscan
+	DEC	POLLTGT
+	LDA	POLLTGT
+	BNE	.exit
+	
+	LDA	POLLRES
+	STA	POLLTGT
+	JSR	KBDPOLL	
+	CMP	KBDBYTE
+	STA	KBDBYTE
+	BEQ	.exit		; Don't repeat
+	LDA	#$FF
+	STA	KBDNEW		; Signal a pressed key
+.exit
 	INC	SERCNT
 	RTS
 	
+;-----------------------------------------------------------------------
+; Poll the keyboard
+KBDPOLL	SUBROUTINE
+	LDY	#10
+	LDX	#0		; Offset into scan matrix
+	STX	SHIFT
+	STX	KEY		; Reset key and shift
+	STY	PIA1_PA
+.loop
+	DEC	PIA1_PA		; Set scan row
+	LDA	PIA1_PB		; Read in row
+
+	LDY	#8		; 8 bits
+.bitloop
+	PHA
+	ORA	#0		; Reset flags based on A
+	BMI	.nextbit	; Check if key pressed
+	; Found a keypress
+	LDA	KBDMATRIX,X	; Read in scan
+	BNE	.noshift	
+	; A shift key has been pressed
+	LDA	#$80
+	STA	SHIFT
+	BNE	.nextbit
+.noshift
+	; Otherwise we found our keypress
+	STA	KEY
+	; Keep going (incase of shift keys)
+.nextbit
+	PLA			; Restore press
+	ROL			; Shift left
+	INX			; Next char in table
+	DEY
+	BNE	.bitloop	
+	; Next row
+.next
+	LDA	PIA1_PA		; Check if we're done
+	AND	#$0F
+	BNE	.loop
+	; We're done, apply shift if needed
+	LDA	SHIFT
+	BPL	.std		; If not then keep the same
+	; Do shift
+	LDA	KEY
+	BMI	.std		; If high bit set, key can't be shifter
+	BEQ	.nokey		; Ignore shift by itself
+	ORA	#$80		; For now set the high bit if shift pressed
+.nokey
+	RTS
+.std
+	LDA	KEY
+	AND	#$7F		; Remove high bit, if no shift key
+	RTS
 	
+	
+		
+	
+
+	
+	
+KBDMATRIX 
+; This is the matrix for Graphics keyboards only!
+; Buisness keyboards use a different matrix >_<
+; $00 = shift
+; $FF = non-existant
+; If $80 set then don't apply shift 
+KR9	DC.B	 '=, '.,$FF,$83, '<, ' , '[,$92
+KR8	DC.B	 '-, '0,$00, '>,$FF, '], '@,$00
+KR7	DC.B	 '+, '2,$FF, '?, ',, 'N, 'V, 'X
+KR6	DC.B	 '3, '1,$8D, ';, 'M, 'B, 'C, 'Z
+KR5	DC.B	 '*, '5,$FF, ':, 'K, 'H, 'F, 'S
+KR4	DC.B	 '6, '4,$FF, 'L, 'J, 'G, 'D, 'A
+KR3	DC.B	 '/, '8,$FF, 'P, 'I, 'Y, 'R, 'W
+KR2	DC.B	 '9, '7, '^, 'O, 'U, 'T, 'E, 'Q
+KR1	DC.B	$88,$11,$FF, '), '\, '', '$, '"
+KR0	DC.B	$9D,$13,$5F, '(, '&, '%, '#, '!
+
+; $88 (08) is on DEL, (Should be $94/$14)
+; $5f (_) is on the <- key?
+
 ;-----------------------------------------------------------------------
 ; Do a Rx sample
 SERRX	SUBROUTINE
