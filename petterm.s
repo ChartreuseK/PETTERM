@@ -122,19 +122,19 @@ COLMAX	EQU	40		; Max display columns
 ROWMAX	EQU	25
 
 ; 6522 VIA 
+VIA_PORTB  EQU	$E840
 VIA_PORTAH EQU	$E841		; User-port with CA2 handshake (messes with screen)
+VIA_DDRB   EQU	$E842
 VIA_DDRA   EQU	$E843		; User-port directions
-
 VIA_TIM1L  EQU	$E844		; Timer 1 low byte
 VIA_TIM1H  EQU	$E845		; high
 VIA_TIM1LL EQU	$E846		; Timer 1 low byte latch
 VIA_TIM1HL EQU	$E847		; high latch
 VIA_TIM2L  EQU	$E848		; Timer 2 low byte
 VIA_TIM2H  EQU	$E849		; high
-
+VIA_SR     EQU	$E84A
 VIA_ACR	   EQU	$E84B
 VIA_PCR    EQU  $E84C
-
 VIA_IFR    EQU	$E84D		; Interrupt flag register
 VIA_IER    EQU	$E84E		; Interrupt enable register
 VIA_PORTA  EQU	$E84F		; User-port without CA2 handshake
@@ -166,12 +166,6 @@ BAS4_VECT_BRK  EQU	$0092	; 92/93 - BRK vector
 BAS1_VECT_IRQ  EQU	$0219	; 219/220 - Interrupt vector
 BAS1_VECT_BRK  EQU	$0216	; 216/217 - BRK vector
 
-; Kernal routines (confirm these are the same between BASIC 1,2,4
-KRN_WRT	EQU	$FFD2		; Write character in A
-KRN_GET EQU	$FFE4		; Get a character NZ if key pressed, Z if. ch in A
-; I don't think these are portable
-KRN_SCROLL EQU	$E559		; Scroll screen one line
-KRN_CLR EQU	$E236		; Clear screen
 
 ;-----------------------------------------------------------------------
 ; Start of loaded data
@@ -781,6 +775,8 @@ SERSAMP	SUBROUTINE
 	CMP	KBDBYTE
 	STA	KBDBYTE
 	BEQ	.exit		; Don't repeat
+	LDA	KBDBYTE
+	BEQ	.exit		; Don't signal blank keys
 	LDA	#$FF
 	STA	KBDNEW		; Signal a pressed key
 .exit
@@ -883,9 +879,9 @@ SERRX	SUBROUTINE
 	STA	RXSTATE
 	JMP	.next1
 .stop
-	LDA	RXSAMP
-	CMP	#1		; Make sure stop bit is 0
-	BEQ	.nextstart	; Failed recv, unexpected value Ignore byte 
+	LDA	RXSAMP		; Make sure stop bit is 0
+	BNE	.nextstart	; Failed recv, unexpected value Ignore byte
+				; (Framing error)
 				; resume waiting for start bit
 	; Otherwise save bit
 	LDA	RXCUR
@@ -904,7 +900,6 @@ SERRX	SUBROUTINE
 	ROL	RXCUR		; Shift left to make room for bit
 	LDA	RXCUR
 	ORA	RXSAMP		; Or in current bit
-	EOR	#$01		; Invert bit
 	STA	RXCUR
 	INC	RXBIT
 	LDA	RXBIT
@@ -915,9 +910,8 @@ SERRX	SUBROUTINE
 	JMP	.next3
 	
 .start
-	LDA	RXSAMP
-	CMP	#1		; Check if high
-	BEQ	.next1		; If we didn't find it, try again next sample
+	LDA	RXSAMP		; Look for 0 for start bit
+	BNE	.next1		; If we didn't find it, try again next sample
 	LDA	#STBIT
 	STA	RXSTATE
 	LDA	#0		; Reset bit count
@@ -1025,6 +1019,7 @@ SERTX	SUBROUTINE
 SAMPRX	SUBROUTINE
 	LDA	VIA_PORTA
 	AND	#$01		; Only read the Rx pin
+	EOR	#$01		; Invert?
 	STA	RXSAMP
 	RTS
 
