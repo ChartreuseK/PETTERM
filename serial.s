@@ -174,7 +174,6 @@ SERTX	SUBROUTINE
 SAMPRX	SUBROUTINE
 	LDA	VIA_PORTA
 	AND	#$01		; Only read the Rx pin
-	EOR	#$01		; Invert?
 	STA	RXSAMP
 	RTS
 
