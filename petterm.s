@@ -1,6 +1,6 @@
 ;-----------------------------------------------------------------------
 ; PET Term
-; Version 0.1
+; Version 0.1.7
 ;
 ; A bit-banged full duplex serial terminal for the PET 2001 computers,
 ; including those running BASIC 1.
@@ -160,6 +160,7 @@ INIT	SUBROUTINE
 	STA	TXNEW		; No bytes ready
 	STA	ROW
 	STA	COL
+	STA	MODE1
 	
 	STA	CURLOC
 	LDA	#$80
@@ -167,6 +168,9 @@ INIT	SUBROUTINE
 	
 	; Set-up screen
 	JSR	CLRSCR
+	LDX	#0
+	LDY	#0
+	JSR	GOTOXY
 	
 	LDA	#0
 	STA	VIA_TIM1L
@@ -181,14 +185,30 @@ INIT	SUBROUTINE
 	STA	POLLRES
 	STA	POLLTGT
 	
+	; Set default modifiers so menu can print 
+	LDA	#SCUM_UPPER	; Default mode is uppercase only
+	STA	SC_UPPERMOD	
+	LDA	#SCLM_UPPER	; Default mode is uppercase only
+	STA	SC_LOWERMOD
 	
 	
 	; Fall into START
 ;-----------------------------------------------------------------------
 ; Start of program (after INIT called)
 START	SUBROUTINE
-	
 	CLI	; Enable interrupts
+	
+	JSR	DOMENU
+	
+	JSR	SERINIT		; Re-initialize serial based on menu choices
+	
+	JSR	CASEINIT	; Setup for Mixed or UPPER case 
+	
+	
+	JSR	CLRSCR
+	LDX	#0
+	LDY	#0
+	JSR	GOTOXY
 
 ; Init for GETBUF
 ;	LDA	#<BUF
@@ -209,20 +229,28 @@ START	SUBROUTINE
 	BEQ	.nokey
 	LDA	#$0
 	STA	KBDNEW
-	LDA	KBDBYTE
+	
+.nocasefix
+	
+	LDA	MODE1
+	AND	#MODE1_ECHO
+	BEQ	.noecho
 	
 ; LOCAL ECHOBACK CODE
+	LDA	KBDBYTE
 	PHA
 	JSR	PARSECH		; Local-echoback for now
 	PLA
 	PHA
 	CMP	#$0D		; \r
 	BNE	.noechonl
-	LDA	#$0A
+	LDA	#$0A;
 	JSR	PARSECH
 .noechonl
 	PLA
 ; LOCAL ECHOBACK CODE
+.noecho
+	LDA	KBDBYTE
 	
 	; Check if we can push the byte
 	LDX	TXNEW
@@ -264,7 +292,11 @@ GETCH	SUBROUTINE
 ;-- Keyboard polling code ----------------------------------------------
 ;-----------------------------------------------------------------------
 	INCLUDE "kbd.s"
-	
+;-----------------------------------------------------------------------
+;-- Options menu code --------------------------------------------------
+;-----------------------------------------------------------------------
+	INCLUDE "menu.s"
+
 	
 	
 

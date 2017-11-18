@@ -45,14 +45,27 @@ KBDPOLL	SUBROUTINE
 	LDA	KEY
 	BMI	.std		; If high bit set, key can't be shifter
 	BEQ	.nokey		; Ignore shift by itself
-	ORA	#$80		; For now set the high bit if shift pressed
+	AND	#$DF		; Convert lowercase to uppercase
 .nokey
 	RTS
+	
+	
 .std
+	LDA	MODE1
+	AND	#MODE1_CASE
+	BEQ	.casefix
+.nocasefix
 	LDA	KEY
 	AND	#$7F		; Remove high bit, if no shift key
 	RTS
-	
+.casefix
+	TXA
+	CMP	#$61		; a
+	BCC	.nocasefix	
+	CMP	#$7B		; z+1
+	BCS	.nocasefix	
+	ORA	#$20		; Always uppercase letters
+	BNE	.nocasefix
 	
 		
 	
@@ -67,12 +80,12 @@ KBDMATRIX
 ; If $80 set then don't apply shift 
 KR9	DC.B	 '=, '.,$FF,$83, '<, ' , '[,$92
 KR8	DC.B	 '-, '0,$00, '>,$FF, '], '@,$00
-KR7	DC.B	 '+, '2,$FF, '?, ',, 'N, 'V, 'X
-KR6	DC.B	 '3, '1,$8D, ';, 'M, 'B, 'C, 'Z
-KR5	DC.B	 '*, '5,$FF, ':, 'K, 'H, 'F, 'S
-KR4	DC.B	 '6, '4,$FF, 'L, 'J, 'G, 'D, 'A
-KR3	DC.B	 '/, '8,$FF, 'P, 'I, 'Y, 'R, 'W
-KR2	DC.B	 '9, '7, '^, 'O, 'U, 'T, 'E, 'Q
+KR7	DC.B	 '+, '2,$FF, '?, ',, 'n, 'v, 'x
+KR6	DC.B	 '3, '1,$8D, ';, 'm, 'b, 'c, 'z
+KR5	DC.B	 '*, '5,$FF, ':, 'k, 'h, 'f, 's
+KR4	DC.B	 '6, '4,$FF, 'l, 'j, 'g, 'd, 'a
+KR3	DC.B	 '/, '8,$FF, 'p, 'i, 'y, 'r, 'w
+KR2	DC.B	 '9, '7, '^, 'o, 'u, 't, 'e, 'q
 KR1	DC.B	$88,$11,$FF, '), '\, '', '$, '"
 KR0	DC.B	$9D,$13,$5F, '(, '&, '%, '#, '!
 

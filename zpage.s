@@ -42,6 +42,20 @@ KEY	DS.B	1
 SHIFT	DS.B	1
 
 
+MODE1	DS.B	1		; 76543210
+				; |||||
+				; ||||| 
+				; ||||+----
+				; |||+-----
+				; ||+------ 1 = Inverse case 0 = normal
+				; |+------- 1 = Mixed case  0 = UPPER CASE
+				; +-------- 1 = local echo
+				
+SC_UPPERMOD	DS.B	1	; Modifier for uppercase letters, added to ch
+	; -$40 for UPPERONLY, +$20 for MIXED?
+SC_LOWERMOD	DS.B	1	; Modifier for lowercase letters, added to ch
+	; -$60 for UPPERONLY, -$60 for MIXED
+
 ; Make sure not to use $90-95 these are Vectors for BASIC 2+
 	RORG	$90
 	DS.B	1		; Reserve so we get a compiler error if we

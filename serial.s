@@ -1,3 +1,18 @@
+
+SERINIT	SUBROUTINE
+	; Set-up timers based on BAUD
+	LDX	BAUD
+	LDA	BAUDTBLL,X	; Set interrupt timer 
+	STA	VIA_TIM1LL
+	LDA	BAUDTBLH,X
+	STA	VIA_TIM1HL
+	
+	LDA	POLLINT,X	; Set keyboard polling interval based
+	STA	POLLRES		; on current baud/timer rate
+	STA	POLLTGT
+	
+	RTS
+
 ;-----------------------------------------------------------------------
 ; Bit-banged serial sample (Called at 3x baud rate)
 SERSAMP	SUBROUTINE
@@ -32,8 +47,8 @@ SERRX	SUBROUTINE
 	STA	RXSTATE
 	JMP	.next1
 .stop
-	LDA	RXSAMP		; Make sure stop bit is 0
-	BNE	.nextstart	; Failed recv, unexpected value Ignore byte
+	LDA	RXSAMP		; Make sure stop bit is 1
+	BEQ	.nextstart	; Failed recv, unexpected value Ignore byte
 				; (Framing error)
 				; resume waiting for start bit
 	; Otherwise save bit
@@ -44,16 +59,17 @@ SERRX	SUBROUTINE
 .nextstart
 	LDA	#STSTART
 	STA	RXSTATE
-	JMP	.next3		; Change this if we want to change 
-				; the stop bit length (3 = 1 bit, 6 = 2 bits)
+	JMP	.next1		; Go to looking for next start bit immediatly
+				; Since stop bit = idle tone, we don't need to 
+				; wait
+				; --Change this if we want to change 
+				; --the stop bit length (3 = 1 bit, 6 = 2 bits)
 	
 		
 .datab
-	CLC
-	ROL	RXCUR		; Shift left to make room for bit
-	LDA	RXCUR
-	ORA	RXSAMP		; Or in current bit
-	STA	RXCUR
+	LDA	RXSAMP
+	ROR	RXSAMP		; Rotate into carry
+	ROR	RXCUR		; Shift bit into high bit
 	INC	RXBIT
 	LDA	RXBIT
 	CMP	#BITCNT		; Check if we've read our last bit
@@ -106,9 +122,9 @@ SERTX	SUBROUTINE
 	STA	TXSTATE
 	JMP	.next3		
 .stop	; Send stop bit
-	LDA	#0
+	LDA	#1
 	JSR	SETTX		; Send stop bit
-	LDA	#STIDLE
+	LDA	#STRDY
 	STA	TXSTATE
 	JMP	.next3		; Change this if we want to change 
 				; the stop bit length (3 = 1 bit, 6 = 2 bits)
@@ -165,8 +181,27 @@ SERTX	SUBROUTINE
 ; May need to be modified depending on hardware used
 ;#######################################################################
 	
+; idle, A, idle
+; (Mock Rx code
+RXSAMPL	DC.B	1,0,1,1,0,0,0,0,1,0,1,0,1,0,0,0,0,0,1,0,$FF
+TMP3	DC.B	0
 	
 	
+MOCKRX  SUBROUTINE
+	LDY	TMP3
+	LDA	RXSAMPL,Y
+	CMP	#$FF
+	BNE	.no
+	LDY	#$FF
+	
+	LDA	#$01
+.no	
+	INY	
+	STY	TMP3
+	LDA	RXSAMPL,Y
+	AND	#$01		; Only read the Rx pin
+	STA	RXSAMP
+	RTS
 ;-----------------------------------------------------------------------
 ; Sample the Rx pin into RXSAMP
 ; 1 for high, 0 for low

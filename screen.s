@@ -77,6 +77,77 @@ SCROLL	SUBROUTINE
 	RTS
 	
 	
+	
+;--------
+; Print a character, no ansi escape hanlding
+PRINTCH SUBROUTINE
+	CMP	#$20
+	BCS	.normal
+	CMP	#$0A
+	BEQ	.nl
+	CMP	#$0D
+	BEQ	.cr
+	CMP	#$09
+	BEQ	.tab
+	CMP	#$08
+	BEQ	.bksp
+	; Ignore other ctrl characters for now
+	RTS
+.bksp
+	
+	LDA	COL
+	CMP	#0
+	BNE	.bkspnw
+	LDA	ROW
+	CMP	#0
+	BEQ	.bkspnw2
+	
+	
+	DEC	ROW
+	LDA	#COLMAX
+	STA	COL
+.bkspnw
+	DEC	COL
+	LDA	#-1
+	JSR	ADDCURLOC
+.bkspnw2
+	RTS
+.tab	
+	; Increment COL to next multiple of 8
+	LDA	COL
+	AND	#$F8		
+	CLC
+	ADC	#8
+	STA	COL
+	CMP	#COLMAX
+	BCS	.tabw	
+	TAX
+	LDY	ROW
+	JMP	GOTOXY
+.tabw
+	LDA	#0
+	STA	COL
+	JMp	.nl
+	
+.cr
+	LDX	#0
+	LDY	ROW
+	JMP	GOTOXY
+.nl
+	INC	ROW
+	LDY	ROW
+	CPY	#ROWMAX
+	BNE	.nlrow
+	JSR	SCROLL
+	LDY	#ROWMAX-1
+.nlrow
+	STY	ROW
+	LDX	COL
+	JMP	GOTOXY
+	
+.normal
+	JMP	PUTCH		; Tail call into PUTCH
+
 
 
 ;-----------------------------------------------------------------------
@@ -141,13 +212,13 @@ SCRCONV	SUBROUTINE
 	BCC	.lower
 	; > $80 Then just map to arbitrary PETSCII for now
 .upper
-	SEC
-	SBC	#$40
+	CLC
+	ADC	SC_UPPERMOD
 .done
 	RTS
 .lower
-	SEC
-	SBC	#$60		; Convert to uppercase letters
+	CLC
+	ADC	SC_LOWERMOD	; Convert to uppercase letters
 	RTS
 .nonprint
 	LDA	#$A0		; Inverse Space
@@ -252,4 +323,67 @@ GOTOXY		SUBROUTINE
 	DEY
 	BNE	.rowl
 .done
+	RTS
+
+
+; Print a null terminated string to the screen using PUTCH
+; Max 256 bytes long
+; A - low byte of addr
+; Y - high byte of addr
+PRINTSTR SUBROUTINE
+	STA	.addr+0
+	STY	.addr+1
+	
+	LDX	#0
+.loop:
+	TXA
+	PHA			; Save X
+.addr 	EQU	.+1
+	LDA	$FFFF,X
+	BEQ	.done
+	JSR	PRINTCH
+	PLA
+	TAX			; Restore X
+	INX
+	BNE	.loop
+	RTS
+.done
+	PLA
+	RTS
+	
+
+; Set-up uppercase only or mixed case
+CASEINIT SUBROUTINE
+	LDA	MODE1
+	AND	#MODE1_CASE
+	BEQ	.upper
+	; Mixed case
+	LDA	VIA_PCR
+	ORA	#$02		; Set flag for 2nd char set
+	STA	VIA_PCR
+	
+	LDA	MODE1
+	AND	#MODE1_INV
+	BEQ	.noinv
+	; Mixed case, inverted
+	LDA	#SCUM_MIXEDINV
+	LDY	#SCLM_MIXEDINV
+	JMP	.store
+.noinv
+	; Mixed case, non-inverted
+	LDA	#SCUM_MIXED
+	LDY	#SCLM_MIXED
+	JMP	.store
+.upper
+	; Upper case
+	LDA	VIA_PCR
+	AND	#$FD		; Clear flag for 2nd char set
+	STA	VIA_PCR
+	
+	LDA	#SCUM_UPPER
+	LDY	#SCLM_UPPER
+	
+.store
+	STA	SC_UPPERMOD
+	STY	SC_LOWERMOD
 	RTS
