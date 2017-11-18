@@ -1,6 +1,6 @@
 ;-----------------------------------------------------------------------
 ; PET Term
-; Version 0.1.7
+; Version 0.2.1
 ;
 ; A bit-banged full duplex serial terminal for the PET 2001 computers,
 ; including those running BASIC 1.
@@ -44,6 +44,14 @@
 ; we might be able to push a little bit.
 ;
 ; Hayden Kroepfl 2017
+;
+; Changelog
+; 0.2.0	
+;	- First semi-public release
+;	- Added configuration menu for baud, mixed case support
+; 0.2.1	
+;	- Added control key support (OFF/RVS key)
+;	- Added ability to re-open menu (CLR/HOME key)
 ;
 ; Written for the DASM assembler
 ;----------------------------------------------------------------------- 
@@ -198,6 +206,7 @@ INIT	SUBROUTINE
 START	SUBROUTINE
 	CLI	; Enable interrupts
 	
+.remenu
 	JSR	DOMENU
 	
 	JSR	SERINIT		; Re-initialize serial based on menu choices
@@ -209,13 +218,6 @@ START	SUBROUTINE
 	LDX	#0
 	LDY	#0
 	JSR	GOTOXY
-
-; Init for GETBUF
-;	LDA	#<BUF
-;	STA	TMPA2
-;	LDA	#>BUF
-;	STA	TMPA2+1
-
 
 .loop
 	LDA	RXNEW
@@ -230,7 +232,8 @@ START	SUBROUTINE
 	LDA	#$0
 	STA	KBDNEW
 	
-.nocasefix
+	LDA	KBDBYTE
+	BMI	.termkey	; Key's above $80 are special keys for the terminal
 	
 	LDA	MODE1
 	AND	#MODE1_ECHO
@@ -262,7 +265,11 @@ START	SUBROUTINE
 .nokey
 	JMP	.loop
 
-
+.termkey
+	CMP	#$F0		; $F0 - Menu key
+	BEQ	.remenu
+	
+	JMP	.loop
 
 
 ; Get a character from the serial port (blocking)
