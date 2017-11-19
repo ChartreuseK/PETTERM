@@ -52,6 +52,8 @@
 ; 0.2.1	
 ;	- Added control key support (OFF/RVS key)
 ;	- Added ability to re-open menu (CLR/HOME key)
+; 0.2.2
+;	- Inverted mixed-case, was backwards compared with real hardware.
 ;
 ; Written for the DASM assembler
 ;----------------------------------------------------------------------- 
