@@ -10,10 +10,14 @@ STIDLE	EQU	4
 BITCNT	EQU	8		; 8-bit bytes to recieve
 BITMSK	EQU	$FF		; No mask
 
+    IFCONST COL80
+SCRCOL	EQU	80		; Screen columns
+COLMAX	EQU	80		; Max display columns    
+    ELSE
 SCRCOL	EQU	40		; Screen columns
-SCRROW	EQU	25
-
 COLMAX	EQU	40		; Max display columns
+    ENDIF
+SCRROW	EQU	25
 ROWMAX	EQU	25
 
 ; 6522 VIA 
