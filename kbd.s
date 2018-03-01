@@ -56,9 +56,10 @@ KBDPOLL	SUBROUTINE
 	LDA	SHIFT
 	BPL	.tryctrl	; If not then keep the same
 	; Do shift
+	LDA	KEY
+	BEQ	.nokey		; Ignore shift by itself
 	LDX	KEYOFF
 	LDA	KBDMATRIX_SHIFT,X
-	;BEQ	.nokey		; Ignore shift by itself	
 .nokey
 	RTS
 .tryctrl
@@ -118,16 +119,16 @@ KR0	DC.B	 '. ,$0E,$1D,'8 ,'- ,'8 ,'5 ,'2  ;$8E = BothShift+2, $9D = CursRight
 ; $F0 = HOME (MENU key)
 ; If $80 set then don't apply shift 
 
-KR9	DC.B	 '=, '.,$EF,$83, '<, ' , '[,$FF
+KR9	DC.B	 '=, '.,$EF,$03, '<, ' , '[,$FF
 KR8	DC.B	 '-, '0,$00, '>,$FF, '], '@,$00
 KR7	DC.B	 '+, '2,$EF, '?, ',, 'n, 'v, 'x
-KR6	DC.B	 '3, '1,$8D, ';, 'm, 'b, 'c, 'z
+KR6	DC.B	 '3, '1,$0D, ';, 'm, 'b, 'c, 'z
 KR5	DC.B	 '*, '5,$EF, ':, 'k, 'h, 'f, 's
 KR4	DC.B	 '6, '4,$EF, 'l, 'j, 'g, 'd, 'a
 KR3	DC.B	 '/, '8,$EF, 'p, 'i, 'y, 'r, 'w
 KR2	DC.B	 '9, '7, '^, 'o, 'u, 't, 'e, 'q
-KR1	DC.B	$88,$11,$EF, '), '\, '', '$, '"
-KR0	DC.B	$9D,$F0,$5F, '(, '&, '%, '#, '!
+KR1	DC.B	$08,$11,$EF, '), '\, '', '$, '"
+KR0	DC.B	$1D,$F0,$5F, '(, '&, '%, '#, '!
 
 	ENDIF
 	
