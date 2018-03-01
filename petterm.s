@@ -1,6 +1,6 @@
 ;-----------------------------------------------------------------------
 ; PET Term
-; Version 0.2.1
+; Version 0.3.0
 ;
 ; A bit-banged full duplex serial terminal for the PET 2001 computers,
 ; including those running BASIC 1.
@@ -54,6 +54,10 @@
 ;	- Added ability to re-open menu (CLR/HOME key)
 ; 0.2.2
 ;	- Inverted mixed-case, was backwards compared with real hardware.
+; 0.3.0
+;   - Re-wrote keyboard shift handling.
+;   - Added compile time support for 80 column, buisness layout machines
+;   - Made _ and | display correctly in PETSCII
 ;
 ; Written for the DASM assembler
 ;----------------------------------------------------------------------- 
