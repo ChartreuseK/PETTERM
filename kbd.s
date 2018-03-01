@@ -7,6 +7,7 @@ KBDPOLL	SUBROUTINE
 	STX	SHIFT
 	STX	CTRL
 	STX	KEY		; Reset key and shift
+	STX	KEYOFF
 	STY	PIA1_PA
 .loop
 	DEC	PIA1_PA		; Set scan row
@@ -16,11 +17,10 @@ KBDPOLL	SUBROUTINE
 .bitloop
 	PHA
 	ORA	#0		; Reset flags based on A
-	BMI	.nextbit	; Check if key pressed
+	BMI	.nextbit	; Check if key pressed (Top bit)
 	; Found a keypress
 	LDA	KBDMATRIX,X	; Read in scan
-	BNE	.noshift	
-	
+	BNE	.noshift	; $00 indicates shift key
 	
 	; A shift key has been pressed
 	LDA	#$80
@@ -38,6 +38,7 @@ KBDPOLL	SUBROUTINE
 	BCS	.special
 	; Otherwise we found our keypress
 	STA	KEY
+	STX	KEYOFF
 	; Keep going (incase of shift and ctrl keys)
 .nextbit
 	PLA			; Restore press
@@ -50,14 +51,14 @@ KBDPOLL	SUBROUTINE
 	LDA	PIA1_PA		; Check if we're done
 	AND	#$0F
 	BNE	.loop
+	
 	; We're done, apply shift if needed
 	LDA	SHIFT
 	BPL	.tryctrl	; If not then keep the same
 	; Do shift
-	LDA	KEY
-	BMI	.std		; If high bit set, key can't be shifter
-	BEQ	.nokey		; Ignore shift by itself
-	AND	#$DF		; Convert lowercase to uppercase
+	LDX	KEYOFF
+	LDA	KBDMATRIX_SHIFT,X
+	;BEQ	.nokey		; Ignore shift by itself	
 .nokey
 	RTS
 .tryctrl
@@ -98,18 +99,16 @@ KBDPOLL	SUBROUTINE
 KBDMATRIX 
 	IFCONST BUISKBD
 
-KR9	DC.B	 $96,$EF,': ,$83,'9 ,'6 ,'3 ,$88 ; $88 Left Arrow to BS?, ^V=TAB+<-+DEL
-KR8	DC.B	 $B1,'/ ,$95,$F0,'m ,'  ,'x ,$FF ; $15 - RVS + A + L??, B1 = KP1
-KR7	DC.B	 $B2,$84,$8F,$B0,$2C,'n ,'v ,'z  ; Repeat->^D, $0F = Z+A+L??
-KR6	DC.B	 $B3,$00,$99,$AE,'. ,'b ,'c ,$00 ; $AE-> KP.
-KR5	DC.B	 $B4,'] ,'o ,$91,'u ,'t ,'e ,'q	 ; $91 = CursUP
-KR4	DC.B	 $FF,'p ,'i ,$C0,'y ,'r ,'w ,$89 ;$C0 = nonshiftable @, $FF= nonshift DEL
-KR3	DC.B	 $B6,'[ ,'l ,$8D,'j ,'g ,'d ,'a
-KR2	DC.B	 $B5,'\ ,'k ,'] ,'h ,'f ,'s ,$9B ; $9B = ESC
-KR1	DC.B	 $B9,$EF,'^ ,$B7,'0 ,'7 ,'4 ,'1
-KR0	DC.B	 '. ,$8E,$9D,$B8,'- ,'8 ,'5 ,'2  ;$8E = BothShift+2, $9D = CursRight
-
-
+KR9	DC.B	 $16,$EF,': ,$03,'9 ,'6 ,'3 ,$08 ; $88 Left Arrow to BS?, ^V=TAB+<-+DEL
+KR8	DC.B	 '1 ,'/ ,$15,$F0,'m ,'  ,'x ,$FF ; $15 - RVS + A + L??, B1 = KP1
+KR7	DC.B	 '2 ,$04,$0F,'0 ,$2C,'n ,'v ,'z  ; Repeat->^D, $0F = Z+A+L??
+KR6	DC.B	 '3 ,$00,$19,'. ,'. ,'b ,'c ,$00 ; $AE-> KP.
+KR5	DC.B	 '4 ,'] ,'o ,$11,'u ,'t ,'e ,'q	 ; $91 = CursUP
+KR4	DC.B	 $08,'p ,'i ,'@ ,'y ,'r ,'w ,$09 ;$C0 = nonshiftable @, $FF= nonshift DEL
+KR3	DC.B	 '6 ,'[ ,'l ,$0D,'j ,'g ,'d ,'a
+KR2	DC.B	 '5 ,'\ ,'k ,'; ,'h ,'f ,'s ,$1B ; $9B = ESC
+KR1	DC.B	 '9 ,$EF,'^ ,'7 ,'0 ,'7 ,'4 ,'1
+KR0	DC.B	 '. ,$0E,$1D,'8 ,'- ,'8 ,'5 ,'2  ;$8E = BothShift+2, $9D = CursRight
 	ELSE
 ; This is the matrix for Graphics keyboards only!
 ; Buisness keyboards use a different matrix >_<
@@ -131,9 +130,47 @@ KR1	DC.B	$88,$11,$EF, '), '\, '', '$, '"
 KR0	DC.B	$9D,$F0,$5F, '(, '&, '%, '#, '!
 
 	ENDIF
-
+	
 ; $88 (08) is on DEL, (Should be $94/$14)
 ; $5f (_) is on the <- key?
+
+
+; Keyboard matrix with shift pressed, needed for consistent shifts	
+KBDMATRIX_SHIFT
+	IFCONST BUISKBD
+
+SKR9	DC.B	 $16,$EF,'* ,$83,') ,'& ,'# ,$08 ; $88 Left Arrow to BS?, ^V=TAB+<-+DEL
+SKR8	DC.B	 '1 ,'? ,$15,$F0,'M ,'  ,'X ,$FF ; $15 - RVS + A + L??, B1 = KP1
+SKR7	DC.B	 '2 ,$04,$0F,'0 ,'< ,'N ,'V ,'Z  ; Repeat->^D, $0F = Z+A+L??
+SKR6	DC.B	 '3 ,$00,$19,'. ,'> ,'B ,'C ,$00 ; $AE-> KP.
+SKR5	DC.B	 '4 ,'} ,'O ,$11,'U ,'T ,'E ,'Q	 ; $91 = CursUP
+SKR4	DC.B	 $08,'P ,'I ,'@ ,'Y ,'R ,'W ,$09 ;$C0 = nonshiftable @, $FF= nonshift DEL
+SKR3	DC.B	 '6 ,'{ ,'L ,$0D,'J ,'G ,'D ,'A
+SKR2	DC.B	 '5 ,'| ,'K ,'+ ,'H ,'F ,'S ,$1B ; $1B = ESC
+SKR1	DC.B	 '9 ,$EF,'^ ,'7 ,'0 ,$27,'$ ,'!
+SKR0	DC.B	 '> ,$0E,$1D,'8 ,'= ,'( ,'% ,'"  ;$8E = BothShift+2, $9D = CursRight
+
+	ELSE
+; This is the matrix for Graphics keyboards only!
+; Buisness keyboards use a different matrix >_<
+; $00 = shift
+; $EF = non-existant
+; $FF = REV  (ctrl key)
+; $F0 = HOME (MENU key)
+; If $80 set then don't apply shift 
+
+SKR9	DC.B	 '=, '.,$EF,$03, '<, ' , '[,$FF
+SKR8	DC.B	 '-, '0,$00, '>,$FF, '], '@,$00
+SKR7	DC.B	 '+, '2,$EF, '?, ',, 'N, 'V, 'X
+SKR6	DC.B	 '3, '1,$0D, ';, 'M, 'B, 'C, 'Z
+SKR5	DC.B	 '*, '5,$EF, ':, 'K, 'H, 'F, 'S
+SKR4	DC.B	 '6, '4,$EF, 'L, 'J, 'G, 'D, 'A
+SKR3	DC.B	 '/, '8,$EF, 'P, 'I, 'Y, 'R, 'W
+SKR2	DC.B	 '9, '7, '^, 'O, 'U, 'T, 'E, 'Q
+SKR1	DC.B	$08,$11,$EF, '), '\, '', '$, '"
+SKR0	DC.B	$1D,$F0,$5F, '(, '&, '%, '#, '!
+
+	ENDIF
 
 
 

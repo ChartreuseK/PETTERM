@@ -202,6 +202,10 @@ PUTCH	SUBROUTINE
 ; If this is too slow and we have RAM avail, then use a straight lookup table
 ; ( Ie TAX; LDA LOOKUP,X; RTS )
 SCRCONV	SUBROUTINE
+	CMP	#$5F		; Underscore 
+	BEQ	.underscore	; PETSCII Underscore is a right arrow
+	CMP	#$7C		; Vertical pipe
+	BEQ	.pipe		; PETSCII Vertical pipe seems to give a backslash
 	CMP	#$20
 	BCC	.nonprint	; <$20 aren't printable, may have sideeffects
 	CMP	#$40		; $20 to $3F don't adjust
@@ -223,7 +227,12 @@ SCRCONV	SUBROUTINE
 .nonprint
 	LDA	#$A0		; Inverse Space
 	RTS
-	
+.underscore
+	LDA	#$64		; Close enough to an underscore
+	RTS
+.pipe
+	LDA	#$5D		; Close enough to a pipe
+	RTS
 
 ; Add sign-extended A to CURLOC	
 ; If CURLOC+A exceeds screen then don't change
