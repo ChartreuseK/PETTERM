@@ -56,7 +56,10 @@ SC_UPPERMOD	DS.B	1	; Modifier for uppercase letters, added to ch
 SC_LOWERMOD	DS.B	1	; Modifier for lowercase letters, added to ch
 	; -$60 for UPPERONLY, -$60 for MIXED
 
-KEYOFF	DS.B	1	; Keyboard matrix offset for shift
+KEYOFF	DS.B	1		; Keyboard matrix offset for shift
+KBDTMP	DS.B 	1		; Keyboard scanning temp, to allow BIT instruction
+
+
 
 ; Make sure not to use $90-95 these are Vectors for BASIC 2+
 	RORG	$90
