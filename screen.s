@@ -94,15 +94,13 @@ PRINTCH SUBROUTINE
 	BEQ	.bksp
 	; Ignore other ctrl characters for now
 	RTS
-.bksp
-	
+.bksp	
 	LDA	COL
 	CMP	#0
 	BNE	.bkspnw
 	LDA	ROW
 	CMP	#0
 	BEQ	.bkspnw2
-	
 	
 	DEC	ROW
 	LDA	#COLMAX
@@ -158,7 +156,7 @@ PUTCH	SUBROUTINE
 	JSR	SCRCONV		; Convert ASCII to screen representation
 	LDY	#0 
 	STA	(CURLOC),Y	; Store to current position
-	
+	; Advance to the next position
 	LDA	#1		; 16-bit increment
 	CLC
 	ADC	CURLOC
@@ -166,31 +164,23 @@ PUTCH	SUBROUTINE
 	LDA	#0
 	ADC	CURLOC+1
 	STA	CURLOC+1
-	
-	INC	COL
-	
-	LDA	COL
+
+	INC	COL		; Advance to the right
+	LDA	COL		
 	CMP	#COLMAX
-	BCC	.nowrap
-	LDA	#0
+	BCC	.done		; If < COLMAX then don't wrap back
+	LDA	#0		; Reset to column 0
 	STA	COL
-	INC	ROW
-.nowrap
+	INC	ROW		; Advance to the next row
 	; Check if we wrote the character in the bottom right
 	; and need to scroll the screen
 	LDA	ROW
-	CMP	#ROWMAX
-	BCC	.done
-	DEC	ROW
-		;LDA	#<(SCREND)
-		;CMP	CURLOC
-		;BNE	.done
-		;LDA	#>(SCREND)
-		;CMP	CURLOC+1
-		;BNE	.done
-	; Need to scroll
+	CMP	#ROWMAX	
+	BCC	.done		; ROW < ROWMAX, Still on the screen
+	DEC	ROW		; We went past the end, return to the last line
+	; Need to scroll the screen
 	JSR	SCROLL
-	; Move cursor to bottom left
+	; Move cursor pointer to the bottom left corner
 	LDA	#<SCRBTML
 	STA	CURLOC
 	LDA	#>SCRBTML
@@ -356,7 +346,7 @@ PRINTSTR SUBROUTINE
 	TXA
 	PHA			; Save X
 .addr 	EQU	.+1
-	LDA	$FFFF,X
+	LDA	$FFFF,X		; (Modified address)
 	BEQ	.done
 	JSR	PRINTCH
 	PLA

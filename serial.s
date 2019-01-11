@@ -1,4 +1,16 @@
 
+;-----------------------------------------------------------------------
+; Get a character from the serial port (blocking)
+GETCH	SUBROUTINE	
+	LDA	RXNEW
+	BEQ	GETCH		; Loop till we get a character in
+	LDA	#$0
+	STA	RXNEW		; Acknowledge byte
+	LDA	RXBYTE
+	RTS
+	
+
+
 SERINIT	SUBROUTINE
 	; Set-up timers based on BAUD
 	LDX	BAUD
@@ -170,8 +182,6 @@ SERTX	SUBROUTINE
 	INC	TXTGT
 	RTS
 	
-	
-
 
 
 
@@ -181,25 +191,24 @@ SERTX	SUBROUTINE
 ; May need to be modified depending on hardware used
 ;#######################################################################
 	
-; idle, A, idle
-; (Mock Rx code
+;
+;               -          C                   A
+;               E S   1100   0010   E S   1000  0010    
 RXSAMPL	DC.B	1,0,1,1,0,0,0,0,1,0,1,0,1,0,0,0,0,0,1,0,$FF
 TMP3	DC.B	0
 	
-	
+; Mock up serial Rx for development with the emulator
 MOCKRX  SUBROUTINE
 	LDY	TMP3
 	LDA	RXSAMPL,Y
 	CMP	#$FF
 	BNE	.no
-	LDY	#$FF
-	
-	LDA	#$01
+	LDY	#$FF		; -1, inc'd to 0
 .no	
 	INY	
 	STY	TMP3
 	LDA	RXSAMPL,Y
-	AND	#$01		; Only read the Rx pin
+	AND	#$01		; Only the low bit matters
 	STA	RXSAMP
 	RTS
 ;-----------------------------------------------------------------------
@@ -207,6 +216,7 @@ MOCKRX  SUBROUTINE
 ; 1 for high, 0 for low
 ; NOTE: If we want to support inverse serial do it in here, and SETTX
 SAMPRX	SUBROUTINE
+	JMP	MOCKRX	; DEBUG!!
 	LDA	VIA_PORTA
 	AND	#$01		; Only read the Rx pin
 	STA	RXSAMP

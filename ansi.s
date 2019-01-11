@@ -1,81 +1,11 @@
-
-
-
 ;-----------------------------------------------------------------------
 ; Parse character and handle it
 ; Ch in A
 PARSECH	SUBROUTINE
-	CMP	#$20
-	BCS	.normal
-	CMP	#$0A
-	BEQ	.nl
-	CMP	#$0D
-	BEQ	.cr
 	CMP	#$1B
 	BEQ	DOESC
-	CMP	#$09
-	BEQ	.tab
-	CMP	#$08
-	BEQ	.bksp
-	; Ignore other ctrl characters for now
-	RTS
-		
-.bksp
+	JMP	PRINTCH		; Handle normal characters
 	
-	LDA	COL
-	CMP	#0
-	BNE	.bkspnw
-	LDA	ROW
-	CMP	#0
-	BEQ	.bkspnw2
-	
-	
-	DEC	ROW
-	LDA	#COLMAX
-	STA	COL
-.bkspnw
-	DEC	COL
-	LDA	#-1
-	JSR	ADDCURLOC
-.bkspnw2
-	RTS
-.tab	
-	; Increment COL to next multiple of 8
-	LDA	COL
-	AND	#$F8		
-	CLC
-	ADC	#8
-	STA	COL
-	CMP	#COLMAX
-	BCS	.tabw	
-	TAX
-	LDY	ROW
-	JMP	GOTOXY
-.tabw
-	LDA	#0
-	STA	COL
-	JMp	.nl
-	
-.cr
-	LDX	#0
-	LDY	ROW
-	JMP	GOTOXY
-.nl
-	INC	ROW
-	LDY	ROW
-	CPY	#ROWMAX
-	BNE	.nlrow
-	JSR	SCROLL
-	LDY	#ROWMAX-1
-.nlrow
-	STY	ROW
-	LDX	COL
-	JMP	GOTOXY
-	
-.normal
-	JMP	PUTCH		; Tail call into PUTCH
-
-
 ; ANSI Escape code handling
 ; Move variables to ZP space
 PARSTKL	EQU	4		; Allow up to 4 arguments

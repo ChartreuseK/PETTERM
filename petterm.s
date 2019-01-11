@@ -58,6 +58,11 @@
 ;   - Re-wrote keyboard shift handling.
 ;   - Added compile time support for 80 column, buisness layout machines
 ;   - Made _ and | display correctly in PETSCII
+;   ! Completely broke on real hardware
+;   !! Keyboard scan routine takes ~1943 cycles to complete
+;      But interrupt handler needs to be called every 1111 to not lose
+;      bits at 300 baud!
+;
 ;
 ; Written for the DASM assembler
 ;----------------------------------------------------------------------- 
@@ -278,15 +283,6 @@ START	SUBROUTINE
 	JMP	.loop
 
 
-; Get a character from the serial port (blocking)
-GETCH	SUBROUTINE	
-	LDA	RXNEW
-	BEQ	GETCH		; Loop till we get a character in
-	LDA	#$0
-	STA	RXNEW		; Acknowledge byte
-	LDA	RXBYTE
-	RTS
-	
 
 
 ;-----------------------------------------------------------------------
@@ -351,6 +347,8 @@ IRQHDLR	SUBROUTINE
 	LDA	POLLRES
 	STA	POLLTGT
 	JSR	KBDPOLL		; Do keyboard polling
+	
+
 	
 	CMP	KBDBYTE		; Check if the same byte as before
 	STA	KBDBYTE
