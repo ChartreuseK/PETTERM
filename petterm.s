@@ -1,6 +1,6 @@
 ;-----------------------------------------------------------------------
 ; PET Term
-; Version 0.3.0
+; Version 0.3.1
 ;
 ; A bit-banged full duplex serial terminal for the PET 2001 computers,
 ; including those running BASIC 1.
@@ -43,7 +43,7 @@
 ; to handle each character as well as recieve it. Though with flow control
 ; we might be able to push a little bit.
 ;
-; Hayden Kroepfl 2017
+; Hayden Kroepfl 2017-2019
 ;
 ; Changelog
 ; 0.2.0	
@@ -62,7 +62,11 @@
 ;   !! Keyboard scan routine takes ~1943 cycles to complete
 ;      But interrupt handler needs to be called every 1111 to not lose
 ;      bits at 300 baud!
-;
+; 0.3.1
+;   - Re-wrote keyboard scanning code, old one was too slow and caused desync
+;   - Added simple inverted cursor
+;   - Optimizations
+
 ;
 ; Written for the DASM assembler
 ;----------------------------------------------------------------------- 
