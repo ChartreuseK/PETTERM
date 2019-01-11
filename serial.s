@@ -216,7 +216,6 @@ MOCKRX  SUBROUTINE
 ; 1 for high, 0 for low
 ; NOTE: If we want to support inverse serial do it in here, and SETTX
 SAMPRX	SUBROUTINE
-	JMP	MOCKRX	; DEBUG!!
 	LDA	VIA_PORTA
 	AND	#$01		; Only read the Rx pin
 	STA	RXSAMP
