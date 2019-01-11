@@ -233,10 +233,26 @@ START	SUBROUTINE
 .loop
 	LDA	RXNEW
 	BEQ	.norx		; Loop till we get a character in
+
+	; Remove cursor from old position before handling
+	LDY	#0
+	LDA	(CURLOC),Y
+	;AND	#$7F
+	EOR	#$80
+	STA	(CURLOC),Y
+
+	; Handle new byte
 	LDA	#$0
 	STA	RXNEW		; Acknowledge byte
 	LDA	RXBYTE
 	JSR	PARSECH
+
+	; Set cursor at new position
+	LDY	#0
+	LDA	(CURLOC),Y
+	;ORA	#$80
+	EOR	#$80
+	STA	(CURLOC),Y
 .norx
 	LDA	KBDNEW
 	BEQ	.nokey
