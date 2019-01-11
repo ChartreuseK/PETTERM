@@ -18,12 +18,12 @@ KBDPOLL		SUBROUTINE
 	TAX			; Save A
 	AND	SHIFTMASK,Y
 	BEQ	.noshift
-	STA	SHIFT
+	STA	SHIFT		; Non-zero value indicates shift was pressed
 .noshift
 	TXA
 	AND	CTRLMASK,Y
 	BEQ	.noctrl
-	STA	CTRL
+	STA	CTRL		; Non-zero value indicates ctrl was pressed
 .noctrl TXA
 	AND	KEYMASK,Y
 	BEQ	.nextrow	; No key was pressend in this row

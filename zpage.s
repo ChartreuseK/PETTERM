@@ -59,7 +59,8 @@ SC_LOWERMOD	DS.B	1	; Modifier for lowercase letters, added to ch
 KEYOFF	DS.B	1		; Keyboard matrix offset for shift
 KBDTMP	DS.B 	1		; Keyboard scanning temp, to allow BIT instruction
 
-
+PARSTKL	EQU	4		; Allow up to 4 arguments for ANSI parsing
+PARSTK	DS.B	PARSTKL		
 
 ; Make sure not to use $90-95 these are Vectors for BASIC 2+
 	RORG	$90

@@ -7,10 +7,6 @@ PARSECH	SUBROUTINE
 	JMP	PRINTCH		; Handle normal characters
 	
 ; ANSI Escape code handling
-; Move variables to ZP space
-PARSTKL	EQU	4		; Allow up to 4 arguments
-PARSTK	DS.B	PARSTKL		
-
 DOESC	SUBROUTINE	
 	JSR	GETCH		; Read next character
 	CMP	#'[		
@@ -25,12 +21,11 @@ DOESC	SUBROUTINE
 	BNE	.clrstk		; X is left at 0 for the stk pointer
 .csiloop
 	JSR	GETCH		; Next char
-	CMP	#$40
+	CMP	#$40		; $40 <= x
 	BCS	.final		; Final character byte
-	CMP	#$30
+	CMP	#$30		; $30 <= x < $40
 	BCS	.param		; Parameter byte
-	
-	CMP	#$20
+	CMP	#$20		; $20 <= x < $30
 	BCS	.inter		; Intermediary byte (No param must follow)
 	; Invalid CSI sequence, abort
 	RTS
@@ -38,7 +33,7 @@ DOESC	SUBROUTINE
 	; Ignore intermediate bytes for now
 	JMP	.csiloop
 .param
-	CMP	#':
+	CMP	#':		; $30 <= x <= $39 (0-9)
 	BCC	.digit		; 0-9 ascii
 	CMP	#';
 	BEQ	.sep		; Seperator
@@ -54,16 +49,17 @@ DOESC	SUBROUTINE
 	SEC
 	SBC	#'0		; Convert to digit
 	; Multiply previous by 10 and add digit to it
-	LDY	#10
-	
-.digmul
-	CLC
-	ADC	PARSTK,X
-	DEY
-	BNE	.digmul
-	STA	PARSTK,X
-	JMP	.csiloop
-	
+	TAY			;2; 2; Save digit 
+	LDA	PARSTK,X	;4; 6; Read in previous
+	ASL			;2; 8; x2
+	ASL			;2;10; x4
+	CLC			;2;12;
+	ADC	PARSTK,X	;4;16; x5 (prev*4 + prev)
+	ASL			;2;18; x10
+	STY	PARSTK,X	;4;22; Save current digit (Can't add A+Y)
+	ADC	PARSTK,X	;4;26; 10*prev + cur
+	STA	PARSTK,X	;4;30;	(loop approach takes 184)
+	JMP	.csiloop	; Keep in CSI state
 .final	; Final byte of CSI sequence. Do it!
 	LDY	PARSTK+0	; Preload first stack arg into Y
 	CMP	#'A
