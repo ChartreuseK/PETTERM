@@ -184,16 +184,11 @@ INIT	SUBROUTINE
 	STA	ROW
 	STA	COL
 	STA	MODE1
-	
+	; Set-up screen
 	STA	CURLOC
 	LDA	#$80
-	STA	CURLOC+1
-	
-	; Set-up screen
+	STA	CURLOC+1	;$8000 = top left of screen
 	JSR	CLRSCR
-	LDX	#0
-	LDY	#0
-	JSR	GOTOXY
 	
 	LDA	#0
 	STA	VIA_TIM1L
@@ -299,10 +294,28 @@ START	SUBROUTINE
 .termkey
 	CMP	#$F0		; $F0 - Menu key
 	BEQ	.remenu
-	
+	CMP	#$F1		; $F1 - Up arrow
+	BEQ	.arrowkey
+	CMP	#$F2		; $F2 - Down arrow
+	BEQ	.arrowkey
+	CMP	#$F3		; $F3 - Right arrow
+	BEQ	.arrowkey
+	CMP	#$F4		; $F4 - Left arrow
+	BEQ	.arrowkey
 	JMP	.loop
-
-
+.arrowkey
+	PHA
+	; We'll be sending ANSI cursor positioning codes
+	; ESC [ A, through ESC [ B
+	LDA	#$1B		; ESC
+	JSR	SENDCH
+	LDA	#'[		; [ - CSI
+	JSR	SENDCH
+	PLA
+	; Convert F1-F4 to 'A'-'D' (41-44)
+	AND	#$4F
+	JSR	SENDCH
+	JMP	.loop
 
 
 ;-----------------------------------------------------------------------

@@ -128,16 +128,21 @@ LOG2_TBL DC.B -1,7,6,6,5,5,5,5,4,4,4,4,4,4,4,4
 ; $EF = non-existant
 ; $FF = REV  (ctrl key)
 ; $F0 = HOME (MENU key)
-; If $80 set then don't apply shift (We've got two tables with repeats so it doesn't matter)
+;
+; $F1 = UP
+; $F2 = DOWN
+; $F3 = RIGHT
+; $F4 = LEFT
+;
 KBDMATRIX 
 	IFCONST BUISKBD
 ; Matrix for Business Keyboards
-KR0	DC.B	 '. ,$0E,$1D,'8 ,'- ,'8 ,'5 ,'2  ;$8E = BothShift+2, $9D = CursRight
+KR0	DC.B	 '. ,$0E,$F3,'8 ,'- ,'8 ,'5 ,'2  ;$8E = BothShift+2, $1D = CursRight
 KR1	DC.B	 '9 ,$EF,'^ ,'7 ,'0 ,'7 ,'4 ,'1
 KR2	DC.B	 '5 ,'\ ,'k ,'; ,'h ,'f ,'s ,$1B ; $9B = ESC
 KR3	DC.B	 '6 ,'[ ,'l ,$0D,'j ,'g ,'d ,'a
 KR4	DC.B	 $08,'p ,'i ,'@ ,'y ,'r ,'w ,$09 ;$C0 = nonshiftable @, $FF= nonshift DEL
-KR5	DC.B	 '4 ,'] ,'o ,$11,'u ,'t ,'e ,'q	 ; $91 = CursUP
+KR5	DC.B	 '4 ,'] ,'o ,$F2,'u ,'t ,'e ,'q	 ; $91 = CursUP
 KR6	DC.B	 '3 ,$00,$19,'. ,'. ,'b ,'c ,$00 ; $AE-> KP.
 KR7	DC.B	 '2 ,$04,$0F,'0 ,$2C,'n ,'v ,'z  ; Repeat->^D, $0F = Z+A+L??
 KR8	DC.B	 '1 ,'/ ,$15,$F0,'m ,'  ,'x ,$FF ; $15 - RVS + A + L??, B1 = KP1
@@ -154,12 +159,12 @@ CTRLMASK DC.B   $00,$00,$00,$00,$00,$00,$00,$00,$01,$00
 ; Keyboard matrix with shift pressed, needed for consistent shifts	
 ; Matrix for Business Keyboards
 KBDMATRIX_SHIFT
-SKR0	DC.B	 '> ,$0E,$1D,'8 ,'= ,'( ,'% ,'"  ;";$8E = BothShift+2, $9D = CursRight
+SKR0	DC.B	 '> ,$0E,$F4,'8 ,'= ,'( ,'% ,'"  ;";$8E = BothShift+2, $9D = CursRight
 SKR1	DC.B	 '9 ,$EF,'^ ,'7 ,'0 ,$27,'$ ,'!
 SKR2	DC.B	 '5 ,'| ,'K ,'+ ,'H ,'F ,'S ,$1B ; $1B = ESC
 SKR3	DC.B	 '6 ,'{ ,'L ,$0D,'J ,'G ,'D ,'A
 SKR4	DC.B	 $08,'P ,'I ,'@ ,'Y ,'R ,'W ,$09 ;$C0 = nonshiftable @, $FF= nonshift DEL
-SKR5	DC.B	 '4 ,'} ,'O ,$11,'U ,'T ,'E ,'Q	 ; $91 = CursUP
+SKR5	DC.B	 '4 ,'} ,'O ,$F1,'U ,'T ,'E ,'Q	 ; $91 = CursUP
 SKR6	DC.B	 '3 ,$00,$19,'. ,'> ,'B ,'C ,$00 ; $AE-> KP.
 SKR7	DC.B	 '2 ,$04,$0F,'0 ,'< ,'N ,'V ,'Z  ; Repeat->^D, $0F = Z+A+L??
 SKR8	DC.B	 '1 ,'? ,$15,$F0,'M ,'  ,'X ,$FF ; $15 - RVS + A + L??, B1 = KP1
@@ -170,8 +175,8 @@ SKR9	DC.B	 $16,$EF,'* ,$83,') ,'& ,'# ,$08 ; $88 Left Arrow to BS?, ^V=TAB+<-+DE
 
 	ELSE
 ; Matrix for Graphics keyboards 
-KR0	DC.B	$1D,$F0,$5F, '(, '&, '%, '#, '!
-KR1	DC.B	$08,$11,$EF, '), '\, '', '$, '"		;" ; (Appease the syntax highlighter)
+KR0	DC.B	$F3,$F0,$5F, '(, '&, '%, '#, '!
+KR1	DC.B	$08,$F2,$EF, '), '\, '', '$, '"		;" ; (Appease the syntax highlighter)
 KR2	DC.B	 '9, '7, '^, 'o, 'u, 't, 'e, 'q
 KR3	DC.B	 '/, '8,$EF, 'p, 'i, 'y, 'r, 'w
 KR4	DC.B	 '6, '4,$EF, 'l, 'j, 'g, 'd, 'a
@@ -194,8 +199,8 @@ CTRLMASK DC.B   $00,$00,$00,$00,$00,$00,$00,$00,$08,$01
 ; Keyboard matrix with shift pressed, needed for consistent shifts	
 ; Matrix for Graphics keyboards 
 KBDMATRIX_SHIFT
-SKR0	DC.B	$1D,$F0,$5F, '(, '&, '%, '#, '!
-SKR1	DC.B	$08,$11,$EF, '), '\, '', '$, '"   ;";
+SKR0	DC.B	$F4,$F0,$5F, '(, '&, '%, '#, '!
+SKR1	DC.B	$08,$F1,$EF, '), '\, '', '$, '"   ;";
 SKR2	DC.B	 '9, '7, '^, 'O, 'U, 'T, 'E, 'Q
 SKR3	DC.B	 '/, '8,$EF, 'P, 'I, 'Y, 'R, 'W
 SKR4	DC.B	 '6, '4,$EF, 'L, 'J, 'G, 'D, 'A

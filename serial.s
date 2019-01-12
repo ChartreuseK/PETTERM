@@ -9,8 +9,18 @@ GETCH	SUBROUTINE
 	LDA	RXBYTE
 	RTS
 	
+;-----------------------------------------------------------------------
+; Send a character to the serial port (blocking)
+SENDCH	SUBROUTINE
+	LDX	TXNEW
+	BNE	SENDCH		; Loop till we can send a character
+	STA	TXBYTE
+	LDA	#$FF
+	STA	TXNEW
+	RTS
 
-
+;-----------------------------------------------------------------------
+; Initialize serial interrupt
 SERINIT	SUBROUTINE
 	; Set-up timers based on BAUD
 	LDX	BAUD
