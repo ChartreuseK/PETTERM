@@ -15,69 +15,115 @@ CLRSCR	SUBROUTINE
 	STA	SCRMEM+256,X
 	STA	SCRMEM+512,X
 	STA	SCRMEM+768,X
+	
+	IFCONST	COL80
 	STA	SCRMEM+1024,X	; Clear the extra 1024 bytes on 80 col pets
 	STA	SCRMEM+1280,X
 	STA	SCRMEM+1536,X
 	STA	SCRMEM+1792,X
+	ENDIF
+
 	DEX
 	BNE	.loop
 	RTS
-	
-;-----------------------------------------------------------------------
-; Scroll the screen by one line
-; TODO: Is there a cleaner way to do this fairly fast?
+
+
+; Fast screen scroll code
 SCROLL	SUBROUTINE
-	; Scroll characters upwards
-	LDA	#<(SCRMEM-1)
-	STA	.first
-	LDA	#>(SCRMEM-1)
-	STA	.first+1
-	
-	LDA	#<(SCRMEM+SCRCOL-1)
-	STA	.second
-	LDA	#>(SCRMEM+SCRCOL-1)
-	STA	.second+1
-	
-	LDY	#SCRROW		; Do 1 screen of rows
-.loopb
-	LDX	#SCRCOL		; Do 1 row of columns
-.loopa
-.second EQU	.+1		; Address word of LDA
-	LDA	$FFFF,X		; Read from second row
-.first	EQU	.+1		; Address word of STA
-	STA	$FFFF,X		; Store in first row
-	DEX
-	BNE	.loopa
-	; Add SCRCOL to .first and .second
-	CLC
-	LDA	#SCRCOL
-	ADC	.first
-	STA	.first
-	LDA	#0
-	ADC	.first+1
-	STA	.first+1
-	
-	CLC
-	LDA	#SCRCOL
-	ADC	.second
-	STA	.second
-	LDA	#0
-	ADC	.second+1
-	STA	.second+1
-	
-	DEY
-	BNE	.loopb
-	; Clear last row
-	LDA	#$20		; Blanking character
-	LDX	#SCRCOL
-.clrloop
-	STA	SCRBTML,X
-	DEX
-	BNE	.clrloop
+;--------------------------------------------------
+	IFCONST	COL80
+;--------------------------------------------------
+; Screen scroll for 80 columns
+	LDX	#0
+.loop1
+	LDA	SCRMEM+80,X	; Copy from second line
+	STA	SCRMEM,X	; to first line
+	INX
+	BNE	.loop1
+.loop2
+	LDA	SCRMEM+256+80,X ; Copy from second line
+	STA	SCRMEM+256,X	 ; to first line
+	INX
+	BNE	.loop2
+.loop3
+	LDA	SCRMEM+512+80,X ; Copy from second line
+	STA	SCRMEM+512,X	 ; to first line
+	INX
+	BNE	.loop3
+.loop4
+	LDA	SCRMEM+768+80,X	; Copy from second line
+	STA	SCRMEM+768,X	; to first line
+	INX
+	BNE	.loop4
+.loop5
+	LDA	SCRMEM+1024+80,X	; Copy from second line
+	STA	SCRMEM+1024,X	; to first line
+	INX
+	BNE	.loop5
+.loop6
+	LDA	SCRMEM+1280+80,X ; Copy from second line
+	STA	SCRMEM+1280,X	 ; to first line
+	INX
+	BNE	.loop6
+.loop7
+	LDA	SCRMEM+1536+80,X ; Copy from second line
+	STA	SCRMEM+1536,X	 ; to first line
+	INX
+	BNE	.loop7
+.loop8
+	LDA	SCRMEM+1792+80,X	; Copy from second line
+	STA	SCRMEM+1792,X	; to first line
+	INX
+	CPX	#128		; 80*25 - 1792 - 80, stop on last line
+	BNE	.loop8
+
+
+	LDA	#$20		; Blanking char
+.loopclr
+	STA	SCRMEM+1792,X
+	INX
+	CPX	#208
+	BNE	.loopclr
 	RTS
-	
-	
-	
+;--------------------------------------------------
+	ELSE
+;--------------------------------------------------
+; Screen scroll for 40 columns
+	LDX	#0
+.loop1
+	LDA	SCRMEM+40,X	; Copy from second line
+	STA	SCRMEM+0,X	; to first line
+	INX
+	BNE	.loop1
+.loop2
+	LDA	SCRMEM+256+40,X ; Copy from second line
+	STA	SCRMEM+256+0,X	 ; to first line
+	INX
+	BNE	.loop2
+.loop3
+	LDA	SCRMEM+512+40,X ; Copy from second line
+	STA	SCRMEM+512+0,X	 ; to first line
+	INX
+	BNE	.loop3
+.loop4
+	LDA	SCRMEM+768+40,X	; Copy from second line
+	STA	SCRMEM+768,X	; to first line
+	INX
+	CPX	#192		; 40*25 - 768 - 40, stop on last line
+	BNE	.loop4
+	LDA	#$20		; Blanking char
+.loopclr
+	STA	SCRMEM+768,X
+	INX
+	CPX	#232
+	BNE	.loopclr
+	RTS
+;--------------------------------------------------
+	ENDIF
+;--------------------------------------------------
+
+
+
 ;-----------------------------------------------------------------------
 ; Print a character, no ansi escape hanlding
 ; A - character
