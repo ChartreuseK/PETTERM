@@ -66,7 +66,12 @@
 ;   - Re-wrote keyboard scanning code, old one was too slow and caused desync
 ;   - Added simple inverted cursor
 ;   - Optimizations
-
+;
+;
+; 0.3.1-fast
+;   Started fork using edge interrupt for recieve.
+;   Should allow for significantly faster serial code with less overhead
+;   as we don't have to oversample by 3x
 ;
 ; Written for the DASM assembler
 ;----------------------------------------------------------------------- 
@@ -132,12 +137,11 @@ INIT	SUBROUTINE
 	; different in each version. Find such a byte using emulators.
 	
 	
-	
-	; Set timer to 3x desired initial baud rate
+	; Initial baud rate	
 	LDA	#$01		; 300 baud
 	STA	BAUD
 	
-	
+	; Disable all PIA interrupt sources
 	LDA	PIA1_CRB
 	AND	#$FE		; Disable interrupts (60hz retrace int?)
 	STA	PIA1_CRB	
@@ -151,8 +155,6 @@ INIT	SUBROUTINE
 	LDA	PIA2_CRA
 	AND	#$FE
 	STA	PIA2_CRA	; Disable interrupts
-	
-	
 	
 	; Install IRQ
 	LDA	#<IRQHDLR
@@ -194,11 +196,15 @@ INIT	SUBROUTINE
 	STA	VIA_TIM1L
 	STA	VIA_TIM1H	; Need to clear high before writing latch
 				; Otherwise it seems to fail half the tile?
+
+	; Set up the VIA timer based on the baud rate
 	LDX	BAUD
 	LDA	BAUDTBLL,X
 	STA	VIA_TIM1LL
 	LDA	BAUDTBLH,X
 	STA	VIA_TIM1HL
+
+
 	LDA	POLLINT,X
 	STA	POLLRES
 	STA	POLLTGT
@@ -341,7 +347,14 @@ START	SUBROUTINE
 
 	
 	
-
+;	110  - $2383  (9090.90...)  0.001% error
+;	  Are you hooking this up to an ASR-33 or something?
+; 	300  - $0D05  (3333.33...)  -0.01% error
+;	600  - $0683  (1666.66...)  -0.04% error
+;	1200 - $0341  (833.33...)   -0.04% error
+;	2400 - $01A1  (416.66...)    0.08% error
+;	4800 - $00D0  (208.33...)   -0.16% error
+;	9600 - $0068  (104.16...)   -0.16% error
 
 	
 	
@@ -349,18 +362,23 @@ START	SUBROUTINE
 ;-----------------------------------------------------------------------
 ; Static data
 
-; Baud rate timer values, 3x the baud rate
+; Baud rate timer values, 1x baud rate
 ;		 110  300  600 1200 2400 4800 9600
 BAUDTBLL 
-	DC.B	$D6, $57, $2c, $16, $8B, $45, $23
+	DC.B	$83, $05, $83, $41, $A1, $D0, $68
 BAUDTBLH	
-	DC.B	$0B, $04, $02, $01, $00, $00, $00
-; Poll interval mask for ~60Hz polling based on the baud timer
-	; 	110  300   600 1200 2400 4800  9600 (Baud)
-POLLINT	; 	330  900  1800 2400 4800 9600 19200 (Calls/sec)
-	DC.B	  5,  15,  30,  60, 120, 240, 480
-;Val for 60Hz   5.5   15   30   60  120  240  480
-;Poll freq Hz  	66    60   60   60   60   60   60
+	DC.B	$23, $0D, $06, $03, $01, $00, $00
+; Poll interval mask for ~60Hz keyboard polling based on the baud timer
+	; 	110  300  600 1200 2400 4800  9600 (Baud)
+POLLINT 
+	DC.B	  2,   5,  10,  20,  40,  80, 160
+;Poll freq Hz  	 55   60   60   60   60   60   60
+
+; 1.5x buad timer for after VIA_IFRstart bit
+B15TBLL
+	DC.B	$44, $87, $C4, $E1, $71, $38, $9C
+B15TBLH
+	DC.B	$35, $13, $09, $04, $02, $01, $00
 ;-----------------------------------------------------------------------
 
 
@@ -368,21 +386,70 @@ POLLINT	; 	330  900  1800 2400 4800 9600 19200 (Calls/sec)
 
 ;-----------------------------------------------------------------------
 ; Interrupt handler
-IRQHDLR	SUBROUTINE
-	; We'll assume that the only IRQ firing is for the VIA timer 1
-	; (ie. We've set it up right)
-	LDA	VIA_TIM1L	; Acknowlege the interrupt
-	JSR	SERSAMP		; Do our sampling
-	
+IRQHDLR	SUBROUTINE ; 
+	; 3 possible interrupt sources: (order of priority)
+	;  TIM2 - RX timer (after start bit)
+	;  CA1 falling - Start bit of data to recieve
+	;  TIM1 - TX timer/kbd poll
+
+	LDA	#$20		; TIMER2 flag
+	BIT	VIA_IFR
+	BNE	.tim2		; CA1 triggered $02
+	BVS	.tim1		; Timer 1       $40
+	JMP	.ca1
+	;--------------------------------
+	; Timer 2  $20
+.tim2
+	LDA	VIA_TIM2L	; Acknowledge
+	LDA	VIA_PORTAH	; Clear any pending CA1 interrupts
+	; Read in bit from serial port, build up byte
+	; If 8 recieved, indicate byte, and disable our
+	; interrupt
+	LDA	VIA_PORTA
+	AND	#$01		; Only read the Rx pin
+	ROR			; Move into carry
+	ROR	RXCUR
+
+	DEC	RXBIT
+	BNE	.tim2retrig
+
+	; We've receieved a byte, signal to program
+	; disable our interrupt
+	LDA	RXCUR
+	STA	RXBYTE		; Save cur byte, as received byte
+	LDA	#$FF
+	STA	RXNEW		; Indicate byte recieved
+
+	LDA	#$22		; Disable timer 2 interrupt and CA1
+	STA	VIA_IER
+	LDA	#$82		; Enable CA1 interrupt
+	STA	VIA_IER
+	; Clear any CA1 interrupt soruce
+	LDA	VIA_PORTAH
+	BNE	.exit
+
+.tim2retrig
+	LDX	BAUD
+	LDA	BAUDTBLL,X
+	STA	VIA_TIM2L
+	LDA	BAUDTBLH,X
+	STA	VIA_TIM2H
+	JMP	.exit
+	;--------------------------------
+.tim1
+	LDA	VIA_TIM1L
+	; Transmit next bit if sending
+	JSR	SERTX		; Use old routine for now
+	; Do keyboard polling after
 	DEC	POLLTGT		; Check if we're due to poll
 	BNE	.exit
 	
+	; Reset keyboard poll count
 	LDA	POLLRES
 	STA	POLLTGT
 	JSR	KBDPOLL		; Do keyboard polling
 	
-
-	
+	; Check if we have a new keypress
 	CMP	KBDBYTE		; Check if the same byte as before
 	STA	KBDBYTE
 	BEQ	.exit		; Don't repeat
@@ -390,6 +457,29 @@ IRQHDLR	SUBROUTINE
 	BEQ	.exit		; Don't signal blank keys
 	LDA	#$FF
 	STA	KBDNEW		; Signal a pressed key
+	BNE	.exit	
+	;--------------------------------	
+.ca1
+	LDA	VIA_PORTAH	; Acknowledge int
+	; We hit a start bit, set up TIM2
+	; We want the first event to be in 1.5 periods
+	; And enable tim2 interrupt
+	LDX	BAUD
+	LDA	BAUDTBLL,X
+	STA	VIA_TIM2L
+	LDA	BAUDTBLH,X
+	STA	VIA_TIM2H	; Timer 2 is off
+
+
+	LDA	#$02		; Disable CA1 interrupt
+	STA	VIA_IER
+	LDA	#$A0		; Enable Timer 2 interrupt
+	STA	VIA_IER
+
+	LDA	#8
+	STA	RXBIT
+
+	;--------------------------------
 .exit
 	; Restore registers saved on stack by KERNAL
 	PLA			; Pop Y
@@ -408,14 +498,16 @@ IRQHDLR	SUBROUTINE
 INITVIA SUBROUTINE
 	LDA	#$00		; Rx pin in (PA0) (rest input as well)
 	STA	VIA_DDRA	; Set directions
-	LDA	#$40		; Shift register disabled, no latching, T1 free-run
+	LDA	#$40		; Shift register disabled, no latching, T1 free-run, T2 one-shot
 	STA	VIA_ACR		
+
 	LDA	#$EC		; Tx as output high, uppercase+graphics ($EE for lower)
+				; CA1 trigger on falling edge
 	STA	VIA_PCR		
 	; Set VIA interrupts so that our timer is the only interrupt source
 	LDA	#$7F		; Clear all interrupt flags
 	STA	VIA_IER
-	LDA	#$C0		; Enable VIA interrupt and Timer 1 interrupt
+	LDA	#$C2		; Enable Timer 1 interrupt and CA1 interrupt
 	STA	VIA_IER
 	RTS
 	

@@ -142,14 +142,13 @@ SERTX	SUBROUTINE
 	JSR	SETTX		; Idle
 	LDA	#STRDY
 	STA	TXSTATE
-	JMP	.next3		
+	RTS
 .stop	; Send stop bit
 	LDA	#1
 	JSR	SETTX		; Send stop bit
 	LDA	#STRDY
 	STA	TXSTATE
-	JMP	.next3		; Change this if we want to change 
-				; the stop bit length (3 = 1 bit, 6 = 2 bits)
+	RTS
 .datab	; Send data bit
 	LDA	#0
 	ROR	TXCUR		; Rotate current bit into carry
@@ -158,10 +157,10 @@ SERTX	SUBROUTINE
 	INC	TXBIT
 	LDA	TXBIT
 	CMP	#BITCNT
-	BNE	.next3		; If more bits to go
+	BNE	.done		; If more bits to go
 	LDA	#STSTOP
 	STA	TXSTATE
-	JMP	.next3		; Hold for 3 samples
+	RTS
 	
 .start	; Send start bit
 	LDA	#0	
@@ -169,27 +168,21 @@ SERTX	SUBROUTINE
 	JSR	SETTX		; Send Start bit
 	LDA	#STBIT
 	STA	TXSTATE
-	JMP	.next3		; Hold start bit for 3 samples
+	RTS
 	
 .ready
 	LDA	#1
 	JSR	SETTX		; Idle state
 	
 	LDA	TXNEW		; Check if we have a byte waiting to send
-	BPL	.next3		; If not check again next baud		
+	BPL	.done		; If not check again next baud		
 	LDA	TXBYTE
 	STA	TXCUR		; Copy byte to read
 	LDA	#0
 	STA	TXNEW		; Reset new flag
 	LDA	#STSTART	
 	STA	TXSTATE
-	;JMP	.next1		; Start sending next sample period
-.next3	
-	INC	TXTGT
-.next2
-	INC	TXTGT
-.next1
-	INC	TXTGT
+.done
 	RTS
 	
 
