@@ -241,37 +241,42 @@ PUTCH	SUBROUTINE
 ; If this is too slow and we have RAM avail, then use a straight lookup table
 ; ( Ie TAX; LDA LOOKUP,X; RTS )
 SCRCONV	SUBROUTINE
-	CMP	#$5F		; Underscore 
-	BEQ	.underscore	; PETSCII Underscore is a right arrow
-	CMP	#$7C		; Vertical pipe
-	BEQ	.pipe		; PETSCII Vertical pipe seems to give a backslash
-	CMP	#$20
-	BCC	.nonprint	; <$20 aren't printable, may have sideeffects
-	CMP	#$40		; $20 to $3F don't adjust
+	CMP	#$40		; <$41 don't adjust
 	BCC	.done
-	CMP	#$60		; $40 to $5F are 'uppercase' letters
+	CMP	#$5A		; $41 to $5A are 'uppercase' letters
 	BCC	.upper
-	CMP	#$80		; $60 to $7F are 'lowercase' letters
+	CMP	#$61
+	BCC	.done		; $5B to 60 don't need case conversion
+	CMP	#$7A		; $60 to $7A are 'lowercase' letters
 	BCC	.lower
-	; > $80 Then just map to arbitrary PETSCII for now
+	BPL	.done		; 7B to 7F don't need case conversion
+	; >$80, map to arbitrary inverted screen codes
+	RTS
+.done
+	TAX
+	LDA	SCRCONVTBL,X
+	RTS
 .upper
 	CLC
 	ADC	SC_UPPERMOD
-.done
 	RTS
 .lower
 	CLC
 	ADC	SC_LOWERMOD	; Convert to uppercase letters
 	RTS
-.nonprint
-	LDA	#$A0		; Inverse Space
-	RTS
-.underscore
-	LDA	#$64		; Close enough to an underscore
-	RTS
-.pipe
-	LDA	#$5D		; Close enough to a pipe
-	RTS
+
+
+SCRCONVTBL
+	DC.B	$A0,$A0,$A0,$A0,$A0,$A0,$A0,$A0,$A0,$A0,$A0,$A0,$A0,$A0,$A0,$A0	
+	DC.B	$A0,$A0,$A0,$A0,$A0,$A0,$A0,$A0,$A0,$A0,$A0,$A0,$A0,$A0,$A0,$A0	; 0-1F unprintable (A0 is inverse space)
+	DC.B	$20,$21,$22,$23,$24,$25,$26,$27,$28,$29,$2A,$2B,$2C,$2D,$2E,$2F
+	DC.B	$30,$31,$32,$33,$34,$35,$36,$37,$38,$39,$3A,$3B,$3C,$3D,$3E,$3F ; 20-3f don't adjust, all correct
+	DC.B    $40,$41,$42,$43,$44,$45,$46,$47,$48,$49,$4a,$4b,$4c,$4d,$4e,$4f	; Uppercase ascii -> screen code
+        DC.B    $50,$51,$52,$53,$54,$55,$56,$57,$58,$59,$5a,$1b,$1c,$1d,$1e,$64
+        DC.B    $7D,$01,$02,$03,$04,$05,$06,$07,$08,$09,$0a,$0b,$0c,$0d,$0e,$0f ; Backtick becomes _| box drawing char
+        DC.B    $10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$1a,$AC,$5D,$AE,$71,$66	; Fixed pipe, tidla becomes inverse T shaped box drawing
+										; DEL becomes half shaded box
+
 
 ;-----------------------------------------------------------------------
 ; Add sign-extended A to CURLOC	
@@ -361,21 +366,79 @@ GOTOXY		SUBROUTINE
 	STX	CURLOC
 	STX	COL
 	STY	ROW
-	LDA	#$80
-	STA	CURLOC+1
-	CPY	#0
-	BEQ	.done
-.rowl
-	LDA	CURLOC
-	CLC
-	ADC	#SCRCOL		; Add one row
-	STA	CURLOC
-	LDA	CURLOC+1
-	ADC	#0
-	STA	CURLOC+1
-	DEY
-	BNE	.rowl
-.done
+
+	LDA	#0		;2; Clear for now till we've done our row
+	STA	CURLOC+1	;3;
+
+	;-----------------------------
+	IFCONST	COL80
+	;-----------------------------
+	; ROW is between 0 and 24, we need to multiply it by 80
+	; 80 = $40 + $10
+	TYA			;2; Row
+	ASL			;2; *2
+	ASL			;2; *4
+	ASL			;2; *8 
+	ASL			;2; *16 (Don't have to worry about carry until 16 24*16=384)
+	TAX			;2; (Save low byte of *16, may have overflowed!)
+	ROL	CURLOC+1	;5;
+	LDY	CURLOC+1	;3; (Save high byte of *16, in Y)
+	ASL			;2; *32
+	ROL	CURLOC+1	;5;
+	ASL			;2; *64
+	ROL	CURLOC+1	;5;
+	; Now handle the low parts
+	CLC			;2;
+	ADC	CURLOC		;3;
+	STA	CURLOC		;3; CURLOC = row*64 + col
+	LDA	CURLOC+1	;3;
+	ADC	#0		;2;
+	STA	CURLOC+1	;3;
+	; Now the *16 part
+	TXA			;2; Low byte of *16
+	CLC			;2;
+	ADC	CURLOC		;3;
+	STA	CURLOC		;3;
+	TYA			;2; High byte of *16
+	ADC	CURLOC+1	;3; To high byte (carry will be clear)
+	ADC	#>SCRMEM	;2; Add high byte of scrmem to make this a pointer
+	STA	CURLOC+1	;3; CURLOC = SCRMEM + COL + ROW*80
+	; New code = 75, vs old worst case of 556
+	;-----------------------------
+	ELSE
+	;-----------------------------
+	; ROW is between 0 and 24, we need to multiply it by 40
+	; 40 = $20 + $8   80 = $40 + $10
+	TYA			;2; Row
+	ASL			;2; *2
+	ASL			;2; *4
+	ASL			;2; *8 
+	TAX			;2;  Save Row * 8 (Can't have overflowed)
+	ASL			;2; *16 (Don't have to worry about carry until 16 24*16=384)
+	ROL	CURLOC+1	;5;
+	ASL			;2; *32
+	ROL	CURLOC+1	;5;
+	; Now handle the low part
+	CLC			;2;
+	ADC	CURLOC		;3;
+	STA	CURLOC		;3; CURLOC = row*32 + col
+	LDA	CURLOC+1	;3;
+	ADC	#0		;2;
+	STA	CURLOC+1	;3; TODO: check if previous adc can ever overflow
+	; Now the *8 part
+	TXA			;2;
+	CLC			;2;
+	ADC	CURLOC		;3;
+	STA	CURLOC		;3;
+	LDA	CURLOC+1	;3;
+	ADC	#>SCRMEM	;2; Add carry and also high byte of scrmem to make this a pointer
+	STA	CURLOC+1	;3;
+	; New code = 63, vs old worst case of 556
+
+	;-----------------------------
+	ENDIF
+	;-----------------------------
+	
 	RTS
 
 ;-----------------------------------------------------------------------
