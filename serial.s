@@ -35,88 +35,8 @@ SERINIT	SUBROUTINE
 	
 	RTS
 
-;-----------------------------------------------------------------------
-; Bit-banged serial sample (Called at 3x baud rate)
-SERSAMP	SUBROUTINE
-	LDA	SERCNT
-	CMP	RXTGT		; Check if we're due for the next Rx event
-	BNE	.trytx
-	JSR	SERRX
-.trytx
-	LDA	SERCNT
-	CMP	TXTGT
-	BNE	.exit
-	JSR	SERTX
-.exit
-	INC	SERCNT
-	RTS
 
 
-
-;-----------------------------------------------------------------------
-; Do a Rx sample
-SERRX	SUBROUTINE
-	JSR	SAMPRX		; Sample the Rx line
-	LDA	RXSTATE
-	CMP	#STSTART	; Waiting for start bit
-	BEQ	.start
-	CMP	#STBIT		; Sample data bit
-	BEQ	.datab
-	CMP	#STSTOP		; Sample stop bit
-	BEQ	.stop
-	; Invalid Rx state, reset to STSTART
-	LDA	#STSTART
-	STA	RXSTATE
-	JMP	.next1
-.stop
-	LDA	RXSAMP		; Make sure stop bit is 1
-	BEQ	.nextstart	; Failed recv, unexpected value Ignore byte
-				; (Framing error)
-				; resume waiting for start bit
-	; Otherwise save bit
-	LDA	RXCUR
-	STA	RXBYTE		; Save cur byte, as received byte
-	LDA	#$FF
-	STA	RXNEW		; Indicate byte recieved
-.nextstart
-	LDA	#STSTART
-	STA	RXSTATE
-	JMP	.next1		; Go to looking for next start bit immediatly
-				; Since stop bit = idle tone, we don't need to 
-				; wait
-				; --Change this if we want to change 
-				; --the stop bit length (3 = 1 bit, 6 = 2 bits)
-	
-		
-.datab
-	LDA	RXSAMP
-	ROR	RXSAMP		; Rotate into carry
-	ROR	RXCUR		; Shift bit into high bit
-	INC	RXBIT
-	LDA	RXBIT
-	CMP	#BITCNT		; Check if we've read our last bit
-	BNE	.next3
-	LDA	#STSTOP		; Next is the stop bit
-	STA	RXSTATE
-	JMP	.next3
-	
-.start
-	LDA	RXSAMP		; Look for 0 for start bit
-	BNE	.next1		; If we didn't find it, try again next sample
-	LDA	#STBIT
-	STA	RXSTATE
-	LDA	#0		; Reset bit count
-	STA	RXBIT
-.next4
-	INC	RXTGT		; Next sample at cur+4
-.next3
-	INC	RXTGT		; cur + 3
-.next2
-	INC	RXTGT		; Cur + 2
-.next1
-	INC	RXTGT		; Cur + 1
-	RTS
-	
 	
 
 ;-----------------------------------------------------------------------

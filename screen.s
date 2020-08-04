@@ -30,100 +30,63 @@ CLRSCR	SUBROUTINE
 
 ; Fast screen scroll code
 SCROLL	SUBROUTINE
-;--------------------------------------------------
-	IFCONST	COL80
-;--------------------------------------------------
-; Screen scroll for 80 columns
-	LDX	#0
-.loop1
-	LDA	SCRMEM+80,X	; Copy from second line
-	STA	SCRMEM,X	; to first line
-	INX
-	BNE	.loop1
-.loop2
-	LDA	SCRMEM+256+80,X ; Copy from second line
-	STA	SCRMEM+256,X	 ; to first line
-	INX
-	BNE	.loop2
-.loop3
-	LDA	SCRMEM+512+80,X ; Copy from second line
-	STA	SCRMEM+512,X	 ; to first line
-	INX
-	BNE	.loop3
-.loop4
-	LDA	SCRMEM+768+80,X	; Copy from second line
-	STA	SCRMEM+768,X	; to first line
-	INX
-	BNE	.loop4
-.loop5
-	LDA	SCRMEM+1024+80,X	; Copy from second line
-	STA	SCRMEM+1024,X	; to first line
-	INX
-	BNE	.loop5
-.loop6
-	LDA	SCRMEM+1280+80,X ; Copy from second line
-	STA	SCRMEM+1280,X	 ; to first line
-	INX
-	BNE	.loop6
-.loop7
-	LDA	SCRMEM+1536+80,X ; Copy from second line
-	STA	SCRMEM+1536,X	 ; to first line
-	INX
-	BNE	.loop7
-.loop8
-	LDA	SCRMEM+1792+80,X	; Copy from second line
-	STA	SCRMEM+1792,X	; to first line
-	INX
-	CPX	#128		; 80*25 - 1792 - 80, stop on last line
-	BNE	.loop8
-
-
-	LDA	#$20		; Blanking char
+	LDX	#SCRCOL-1
 .loopclr
-	STA	SCRMEM+1792,X
-	INX
-	CPX	#208
-	BNE	.loopclr
+	LDA	SCRMEM+[ 1*SCRCOL],X	;4;
+	STA	SCRMEM+[ 0*SCRCOL],X	;4;
+	LDA	SCRMEM+[ 2*SCRCOL],X	;4;
+	STA	SCRMEM+[ 1*SCRCOL],X	;4;
+	LDA	SCRMEM+[ 3*SCRCOL],X	;4;
+	STA	SCRMEM+[ 2*SCRCOL],X	;4;
+	LDA	SCRMEM+[ 4*SCRCOL],X	;4;
+	STA	SCRMEM+[ 3*SCRCOL],X	;4;
+	LDA	SCRMEM+[ 5*SCRCOL],X	;4;
+	STA	SCRMEM+[ 4*SCRCOL],X	;4;
+	LDA	SCRMEM+[ 6*SCRCOL],X	;4;
+	STA	SCRMEM+[ 5*SCRCOL],X	;4;
+	LDA	SCRMEM+[ 7*SCRCOL],X	;4;
+	STA	SCRMEM+[ 6*SCRCOL],X	;4;
+	LDA	SCRMEM+[ 8*SCRCOL],X	;4;
+	STA	SCRMEM+[ 7*SCRCOL],X	;4;
+	LDA	SCRMEM+[ 9*SCRCOL],X	;4;
+	STA	SCRMEM+[ 8*SCRCOL],X	;4;
+	LDA	SCRMEM+[10*SCRCOL],X	;4;
+	STA	SCRMEM+[ 9*SCRCOL],X	;4;
+	LDA	SCRMEM+[11*SCRCOL],X	;4;
+	STA	SCRMEM+[10*SCRCOL],X	;4;
+	LDA	SCRMEM+[12*SCRCOL],X	;4;
+	STA	SCRMEM+[11*SCRCOL],X	;4;
+	LDA	SCRMEM+[13*SCRCOL],X	;4;
+	STA	SCRMEM+[12*SCRCOL],X	;4;
+	LDA	SCRMEM+[14*SCRCOL],X	;4;
+	STA	SCRMEM+[13*SCRCOL],X	;4;
+	LDA	SCRMEM+[15*SCRCOL],X	;4;
+	STA	SCRMEM+[14*SCRCOL],X	;4;
+	LDA	SCRMEM+[16*SCRCOL],X	;4;
+	STA	SCRMEM+[15*SCRCOL],X	;4;
+	LDA	SCRMEM+[17*SCRCOL],X	;4;
+	STA	SCRMEM+[16*SCRCOL],X	;4;
+	LDA	SCRMEM+[18*SCRCOL],X	;4;
+	STA	SCRMEM+[17*SCRCOL],X	;4;
+	LDA	SCRMEM+[19*SCRCOL],X	;4;
+	STA	SCRMEM+[18*SCRCOL],X	;4;
+	LDA	SCRMEM+[20*SCRCOL],X	;4;
+	STA	SCRMEM+[19*SCRCOL],X	;4;
+	LDA	SCRMEM+[21*SCRCOL],X	;4;
+	STA	SCRMEM+[20*SCRCOL],X	;4;
+	LDA	SCRMEM+[22*SCRCOL],X	;4;
+	STA	SCRMEM+[21*SCRCOL],X	;4;
+	LDA	SCRMEM+[23*SCRCOL],X	;4;
+	STA	SCRMEM+[22*SCRCOL],X	;4;
+	LDA	SCRMEM+[24*SCRCOL],X	;4;
+	STA	SCRMEM+[23*SCRCOL],X	;4;	
+	LDA	#$20			;2;
+	STA	SCRMEM+[24*SCRCOL],X	;4;=198 from first LDA
+	DEX				;2;
+	BMI	.loopend		;2;
+	JMP	.loopclr		;3; = Each loop takes 205, 40col = 8200, 80col = 16400
+.loopend
 	RTS
-;--------------------------------------------------
-	ELSE
-;--------------------------------------------------
-; Screen scroll for 40 columns
-	LDX	#0		;2;
-.loop1 ;=2
-	LDA	SCRMEM+40,X	;4; Copy from second line
-	STA	SCRMEM+0,X	;4; to first line
-	INX			;2;
-	BNE	.loop1		;3;
-.loop2 ; =3330
-	LDA	SCRMEM+256+40,X ;4; Copy from second line
-	STA	SCRMEM+256+0,X	;4; to first line
-	INX			;2;
-	BNE	.loop2		;3;
-.loop3 ; =6658
-	LDA	SCRMEM+512+40,X ;4; Copy from second line
-	STA	SCRMEM+512+0,X	;4; to first line
-	INX			;2;
-	BNE	.loop3		;3;
-.loop4 ; =9986
-	LDA	SCRMEM+768+40,X	;4; Copy from second line
-	STA	SCRMEM+768,X	;4; to first line
-	INX			;2;
-	CPX	#192		;2; 40*25 - 768 - 40, stop on last line
-	BNE	.loop4		;3;
-	; =12866
-	LDA	#$20		;2; ; Blanking char
-.loopclr ;=12868
-	STA	SCRMEM+768,X	;4;
-	INX			;2;
-	CPX	#232		;2;
-	BNE	.loopclr	;3;
-	RTS			;3;~=13308  (Approximatly 1.5 characters long at 1200 baud)
-;--------------------------------------------------
-	ENDIF
-;--------------------------------------------------
-
-
 
 ;-----------------------------------------------------------------------
 ; Print a character, no ansi escape hanlding

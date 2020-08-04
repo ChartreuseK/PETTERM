@@ -68,10 +68,12 @@
 ;   - Optimizations
 ;
 ;
-; 0.3.1-fast
+; 0.4.0
 ;   Started fork using edge interrupt for recieve.
 ;   Should allow for significantly faster serial code with less overhead
 ;   as we don't have to oversample by 3x
+;   Optimized screen drawing code
+;   
 ;
 ; Written for the DASM assembler
 ;----------------------------------------------------------------------- 
@@ -521,3 +523,7 @@ INITVIA SUBROUTINE
 	
 
 
+
+;----------------------------------------------------------------------------
+	ECHO "Program size in HEX: ", .-$401
+	ECHO "Size from start of ram HEX: ", .

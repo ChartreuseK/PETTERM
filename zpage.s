@@ -26,7 +26,6 @@ COL	DS.B	1		; Current cursor position
 ROW	DS.B	1
 
 CURLOC	DS.W	1		; Pointer to current screen location
-
 TMP1	DS.B	1	
 TMP2	DS.B	1
 
