@@ -379,6 +379,13 @@ B15TBLL
 	DC.B	$44, $87, $C4, $E1, $71, $38, $9C
 B15TBLH
 	DC.B	$35, $13, $09, $04, $02, $01, $00
+
+; Timer 2 isn't freerunning so we have to subtract the cycles till we reset
+; it from the rate (- $5D)
+TIM2BAUDL
+	DC.B	$26, $A8, $26, $e4, $44, $73, $0B
+TIM2BAUDH
+	DC.B	$23, $0C, $06, $02, $01, $00, $00
 ;-----------------------------------------------------------------------
 
 
@@ -386,32 +393,32 @@ B15TBLH
 
 ;-----------------------------------------------------------------------
 ; Interrupt handler
-IRQHDLR	SUBROUTINE ; 
+IRQHDLR	SUBROUTINE ; 36 cycles till we hit here from IRQ firing
 	; 3 possible interrupt sources: (order of priority)
 	;  TIM2 - RX timer (after start bit)
 	;  CA1 falling - Start bit of data to recieve
 	;  TIM1 - TX timer/kbd poll
 
-	LDA	#$20		; TIMER2 flag
-	BIT	VIA_IFR
-	BNE	.tim2		; CA1 triggered $02
+	LDA	#$20		;2; TIMER2 flag
+	BIT	VIA_IFR		;4;
+	BNE	.tim2		;3; CA1 triggered $02
 	BVS	.tim1		; Timer 1       $40
 	JMP	.ca1
 	;--------------------------------
 	; Timer 2  $20
 .tim2
-	LDA	VIA_TIM2L	; Acknowledge
-	LDA	VIA_PORTAH	; Clear any pending CA1 interrupts
+	LDA	VIA_TIM2L	;4; Acknowledge
+	LDA	VIA_PORTAH	;4; Clear any pending CA1 interrupts
 	; Read in bit from serial port, build up byte
 	; If 8 recieved, indicate byte, and disable our
 	; interrupt
-	LDA	VIA_PORTA
-	AND	#$01		; Only read the Rx pin
-	ROR			; Move into carry
-	ROR	RXCUR
+	LDA	VIA_PORTA	;4;
+	AND	#$01		;2; Only read the Rx pin
+	ROR			;2; Move into carry
+	ROR	RXCUR		;5
 
-	DEC	RXBIT
-	BNE	.tim2retrig
+	DEC	RXBIT		;5
+	BNE	.tim2retrig	;3
 
 	; We've receieved a byte, signal to program
 	; disable our interrupt
@@ -429,11 +436,11 @@ IRQHDLR	SUBROUTINE ;
 	BNE	.exit
 
 .tim2retrig
-	LDX	BAUD
-	LDA	BAUDTBLL,X
-	STA	VIA_TIM2L
-	LDA	BAUDTBLH,X
-	STA	VIA_TIM2H
+	LDX	BAUD		;3
+	LDA	TIM2BAUDL,X	;4
+	STA	VIA_TIM2L	;4
+	LDA	TIM2BAUDH,X	;4
+	STA	VIA_TIM2H	;4- From start of IRQ to here is 93 ($5D) cycles!, need to subtract from BAUDTBL
 	JMP	.exit
 	;--------------------------------
 .tim1
