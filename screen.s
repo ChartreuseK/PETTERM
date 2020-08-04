@@ -89,35 +89,36 @@ SCROLL	SUBROUTINE
 	ELSE
 ;--------------------------------------------------
 ; Screen scroll for 40 columns
-	LDX	#0
-.loop1
-	LDA	SCRMEM+40,X	; Copy from second line
-	STA	SCRMEM+0,X	; to first line
-	INX
-	BNE	.loop1
-.loop2
-	LDA	SCRMEM+256+40,X ; Copy from second line
-	STA	SCRMEM+256+0,X	 ; to first line
-	INX
-	BNE	.loop2
-.loop3
-	LDA	SCRMEM+512+40,X ; Copy from second line
-	STA	SCRMEM+512+0,X	 ; to first line
-	INX
-	BNE	.loop3
-.loop4
-	LDA	SCRMEM+768+40,X	; Copy from second line
-	STA	SCRMEM+768,X	; to first line
-	INX
-	CPX	#192		; 40*25 - 768 - 40, stop on last line
-	BNE	.loop4
-	LDA	#$20		; Blanking char
-.loopclr
-	STA	SCRMEM+768,X
-	INX
-	CPX	#232
-	BNE	.loopclr
-	RTS
+	LDX	#0		;2;
+.loop1 ;=2
+	LDA	SCRMEM+40,X	;4; Copy from second line
+	STA	SCRMEM+0,X	;4; to first line
+	INX			;2;
+	BNE	.loop1		;3;
+.loop2 ; =3330
+	LDA	SCRMEM+256+40,X ;4; Copy from second line
+	STA	SCRMEM+256+0,X	;4; to first line
+	INX			;2;
+	BNE	.loop2		;3;
+.loop3 ; =6658
+	LDA	SCRMEM+512+40,X ;4; Copy from second line
+	STA	SCRMEM+512+0,X	;4; to first line
+	INX			;2;
+	BNE	.loop3		;3;
+.loop4 ; =9986
+	LDA	SCRMEM+768+40,X	;4; Copy from second line
+	STA	SCRMEM+768,X	;4; to first line
+	INX			;2;
+	CPX	#192		;2; 40*25 - 768 - 40, stop on last line
+	BNE	.loop4		;3;
+	; =12866
+	LDA	#$20		;2; ; Blanking char
+.loopclr ;=12868
+	STA	SCRMEM+768,X	;4;
+	INX			;2;
+	CPX	#232		;2;
+	BNE	.loopclr	;3;
+	RTS			;3;~=13308  (Approximatly 1.5 characters long at 1200 baud)
 ;--------------------------------------------------
 	ENDIF
 ;--------------------------------------------------
@@ -271,7 +272,7 @@ SCRCONVTBL
 	DC.B	$A0,$A0,$A0,$A0,$A0,$A0,$A0,$A0,$A0,$A0,$A0,$A0,$A0,$A0,$A0,$A0	; 0-1F unprintable (A0 is inverse space)
 	DC.B	$20,$21,$22,$23,$24,$25,$26,$27,$28,$29,$2A,$2B,$2C,$2D,$2E,$2F
 	DC.B	$30,$31,$32,$33,$34,$35,$36,$37,$38,$39,$3A,$3B,$3C,$3D,$3E,$3F ; 20-3f don't adjust, all correct
-	DC.B    $40,$41,$42,$43,$44,$45,$46,$47,$48,$49,$4a,$4b,$4c,$4d,$4e,$4f	; Uppercase ascii -> screen code
+	DC.B    $00,$41,$42,$43,$44,$45,$46,$47,$48,$49,$4a,$4b,$4c,$4d,$4e,$4f	; Uppercase ascii -> screen code
         DC.B    $50,$51,$52,$53,$54,$55,$56,$57,$58,$59,$5a,$1b,$1c,$1d,$1e,$64
         DC.B    $7D,$01,$02,$03,$04,$05,$06,$07,$08,$09,$0a,$0b,$0c,$0d,$0e,$0f ; Backtick becomes _| box drawing char
         DC.B    $10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$1a,$AC,$5D,$AE,$71,$66	; Fixed pipe, tidla becomes inverse T shaped box drawing
