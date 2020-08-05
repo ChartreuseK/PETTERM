@@ -1,6 +1,6 @@
 ;-----------------------------------------------------------------------
-; PET Term
-; Version 0.3.1
+; PETTerm
+; Version 0.4.0
 ;
 ; A bit-banged full duplex serial terminal for the PET 2001 computers,
 ; including those running BASIC 1.
@@ -25,16 +25,6 @@
 ;	2400 - $01A1  (416.66...)    0.08% error
 ;	4800 - $00D0  (208.33...)   -0.16% error
 ;	9600 - $0068  (104.16...)   -0.16% error
-;	  I'd be impressed if we could run this fast without overrun
-; Since we need 3x oversampling for our bit-bang routines, the valus we need
-; are for 3x the baud rate:
-;	110  - $0BD6  (3030.30...)  -0.01% error
-; 	300  - $0457  (1111.11...)  -0.01% error
-;	600  - $022C  (555.55...)   +0.08% error
-;	1200 - $0116  (277.77...)   +0.08% error
-;	2400 - $008B  (138.88...)   +0.08% error
-;	4800 - $0045  (69.44...)    -0.64% error
-;	9600 - $0023  (34.722...)   +0.80% error
 ;
 ; All of these are within normal baud rate tollerances of +-2% 
 ; Thus we should be fine to use them, though we'll be limited by just how
@@ -43,7 +33,7 @@
 ; to handle each character as well as recieve it. Though with flow control
 ; we might be able to push a little bit.
 ;
-; Hayden Kroepfl 2017-2019
+; Hayden Kroepfl 2017-2020
 ;
 ; Changelog
 ; 0.2.0	
@@ -69,11 +59,20 @@
 ;
 ;
 ; 0.4.0
-;   Started fork using edge interrupt for recieve.
-;   Should allow for significantly faster serial code with less overhead
-;   as we don't have to oversample by 3x
-;   Optimized screen drawing code
-;   
+;   - Re-wrote serial recieve routines to use interrupt triggered start bit
+;   -> Now Requires a jumper between pin B and C on the userport header
+;      This is the same as most VIC-20 and C64 serial adapters so little 
+;      change should be required
+;   - Allows for significantly faster serial code with less overhead
+;     as we don't have to oversample by 3x anymore
+;   - 600 and 1200 baud works and appears to be stable
+;     -> 80 column PETs may have an issue at 1200 baud if too many newlines
+;        are sent in a row due to the time needed to scroll the screen.
+;   - Significantly optimized screen handling code
+;   - Fixed keyboard arrow keys bug
+;   - Improved character rendering, all ASCII characters should look
+;     as close to correct as possible. 
+;      (~ is rendered as an inverted T block drawing character)
 ;
 ; Written for the DASM assembler
 ;----------------------------------------------------------------------- 
