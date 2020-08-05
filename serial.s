@@ -1,13 +1,19 @@
 
 ;-----------------------------------------------------------------------
 ; Get a character from the serial port (blocking)
-GETCH	SUBROUTINE	
-	LDA	RXNEW
+GETCH	SUBROUTINE
+	LDX	RXBUFR
+	CPX	RXBUFW
 	BEQ	GETCH		; Loop till we get a character in
-	LDA	#$0
-	STA	RXNEW		; Acknowledge byte
-	LDA	RXBYTE
+	LDA	RXBUF,X		; New character
+	TAX			; Save
+	INC	RXBUFR		; Acknowledge byte by incrementing 
+	LDA	RXBUFR		; Ring buffer
+	AND	#$F
+	STA	RXBUFR
+	TXA
 	RTS
+
 	
 ;-----------------------------------------------------------------------
 ; Send a character to the serial port (blocking)
@@ -33,6 +39,11 @@ SERINIT	SUBROUTINE
 	STA	POLLRES		; on current baud/timer rate
 	STA	POLLTGT
 	
+
+	LDA	#0
+	STA	RXBUFW
+	STA	RXBUFR
+
 	RTS
 
 

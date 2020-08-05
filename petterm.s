@@ -183,7 +183,9 @@ INIT	SUBROUTINE
 	STA	SERCNT
 	STA	TXTGT		; Fire Immediatly
 	STA	RXTGT		; Fire immediatly
-	STA	RXNEW		; No bytes ready
+	STA	RXBUFW
+	STA	RXBUFR
+	;STA	RXNEW		; No bytes ready
 	STA	TXNEW		; No bytes ready
 	STA	ROW
 	STA	COL
@@ -231,6 +233,7 @@ START	SUBROUTINE
 	
 	JSR	CASEINIT	; Setup for Mixed or UPPER case 
 	
+
 	
 	JSR	CLRSCR
 	LDX	#0
@@ -238,7 +241,8 @@ START	SUBROUTINE
 	JSR	GOTOXY
 
 .loop
-	LDA	RXNEW
+	LDX	RXBUFR
+	CPX	RXBUFW
 	BEQ	.norx		; Loop till we get a character in
 
 	; Remove cursor from old position before handling
@@ -249,9 +253,13 @@ START	SUBROUTINE
 	STA	(CURLOC),Y
 
 	; Handle new byte
-	LDA	#$0
-	STA	RXNEW		; Acknowledge byte
-	LDA	RXBYTE
+	LDA	RXBUF,X		; New character
+	TAX			; Save
+	INC	RXBUFR		; Acknowledge byte by incrementing 
+	LDA	RXBUFR		; Ring buffer
+	AND	#$F
+	STA	RXBUFR
+	TXA
 	JSR	PARSECH
 
 	; Set cursor at new position
@@ -424,11 +432,17 @@ IRQHDLR	SUBROUTINE ; 36 cycles till we hit here from IRQ firing
 
 	; We've receieved a byte, signal to program
 	; disable our interrupt
+	
+	LDX	RXBUFW
 	LDA	RXCUR
-	STA	RXBYTE		; Save cur byte, as received byte
-	LDA	#$FF
-	STA	RXNEW		; Indicate byte recieved
+	STA	RXBUF,X
+	
+	INC	RXBUFW
+	LDA	RXBUFW
+	AND	#$F
+	STA	RXBUFW
 
+	
 	LDA	#$22		; Disable timer 2 interrupt and CA1
 	STA	VIA_IER
 	LDA	#$82		; Enable CA1 interrupt

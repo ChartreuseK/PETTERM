@@ -15,9 +15,9 @@ RXBIT	DS.B	1		; Rx data bit #
 RXSAMP	DS.B	1		; Last sampled value
 
 TXBYTE	DS.B	1		; Next byte to transmit
-RXBYTE	DS.B	1		; Last receved byte
+;RXBYTE	DS.B	1		; Last receved byte
 
-RXNEW	DS.B	1		; Indicates byte has been recieved
+;RXNEW	DS.B	1		; Indicates byte has been recieved
 TXNEW	DS.B	1		; Indicates to start sending a byte
 
 BAUD	DS.B	1		; Current baud rate, index into table
@@ -61,8 +61,12 @@ KBDTMP	DS.B 	1		; Keyboard scanning temp, to allow BIT instruction
 PARSTKL	EQU	4		; Allow up to 4 arguments for ANSI parsing
 PARSTK	DS.B	PARSTKL		
 
+
+RXBUF	DS.B	16		; Ring buffer of recieved chars
+RXBUFW	DS.B	1		; Write pointer
+RXBUFR	DS.B	1		; Read pointer
+
 ; Make sure not to use $90-95 these are Vectors for BASIC 2+
 	RORG	$90
 	DS.B	1		; Reserve so we get a compiler error if we
 				; allocate too much before
-
