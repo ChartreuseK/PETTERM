@@ -9,15 +9,11 @@ RXTGT	DS.B	1		; Sample number of next recv event
 TXCUR	DS.B	1		; Current byte being transmitted
 RXCUR	DS.B	1		; Current byte being received
 TXSTATE	DS.B	1		; Next Transmit state
-RXSTATE	DS.B	1		; Next Receive state
 TXBIT	DS.B	1		; Tx data bit #
 RXBIT	DS.B	1		; Rx data bit #
 RXSAMP	DS.B	1		; Last sampled value
 
 TXBYTE	DS.B	1		; Next byte to transmit
-;RXBYTE	DS.B	1		; Last receved byte
-
-;RXNEW	DS.B	1		; Indicates byte has been recieved
 TXNEW	DS.B	1		; Indicates to start sending a byte
 
 BAUD	DS.B	1		; Current baud rate, index into table

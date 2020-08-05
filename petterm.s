@@ -140,7 +140,7 @@ INIT	SUBROUTINE
 	
 	
 	; Initial baud rate	
-	LDA	#$01		; 300 baud
+	LDA	#$03		; 1200 baud
 	STA	BAUD
 	
 	; Disable all PIA interrupt sources
@@ -171,8 +171,6 @@ INIT	SUBROUTINE
 	
 	
 	; Initialize state
-	LDA	#STSTART
-	STA	RXSTATE
 	LDA	#STIDLE		; Output 1 idle tone first
 	STA	TXSTATE
 	
@@ -185,17 +183,19 @@ INIT	SUBROUTINE
 	STA	RXTGT		; Fire immediatly
 	STA	RXBUFW
 	STA	RXBUFR
-	;STA	RXNEW		; No bytes ready
 	STA	TXNEW		; No bytes ready
 	STA	ROW
 	STA	COL
-	STA	MODE1
 	; Set-up screen
 	STA	CURLOC
 	LDA	#$80
 	STA	CURLOC+1	;$8000 = top left of screen
 	JSR	CLRSCR
 	
+
+	LDA	#$40
+	STA	MODE1		; Default to mixed case, non-inverted
+
 	LDA	#0
 	STA	VIA_TIM1L
 	STA	VIA_TIM1H	; Need to clear high before writing latch

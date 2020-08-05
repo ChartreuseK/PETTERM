@@ -34,7 +34,7 @@ KBDPOLL		SUBROUTINE
 	BVS	.b6
 	TAX	
 	LDA	LOG2_TBL,X	; Read in highest set bit
-	BPL	.store		; Branch always (Value is between 0 and 5)
+	BPL	.store		; Branch always (Value is between 2 and 7)
 .b7	LDA	#0		;   Table is backwards so 7->0
 	BEQ	.store		; Branch always
 .b6	LDA	#1		;   Table is backwards so 6->1
@@ -58,23 +58,22 @@ KBDPOLL		SUBROUTINE
 	ADC	KEY		; A now contains our offset into the tables
 	TAX			; Save into X
 	
-	LDA	KBDMATRIX,X
-	BMI	.special	; Keys with high bit set shouldn't be modified
-	
-	LDA	CTRL
-	BEQ	.notctrl
-	; Ctrl pressed, read lower table and bitmask to CTRL keys
-	LDA	KBDMATRIX,X
-	AND	#$9F
-.special		
-	RTS
-.notctrl
 	LDA	SHIFT
 	BEQ	.notshift
 	; Shift pressed, read upper table
 	LDA	KBDMATRIX_SHIFT,X
 	RTS
 .notshift
+	LDA	KBDMATRIX,X
+	BMI	.special	; Don't have control modify special keys
+	LDA	CTRL
+	BEQ	.notctrl
+	; Ctrl pressed, read lower table and bitmask to CTRL keys
+	LDA	KBDMATRIX,X
+	AND	#$9F		
+.special
+	RTS
+.notctrl	
 	LDA	MODE1		; Check mode
 	AND	#MODE1_CASE	; Check if we need to do case fixing (all upper)
 	BEQ	.casefix
@@ -192,7 +191,7 @@ KR9	DC.B	 '=, '.,$EF,$03, '<, ' , '[,$FF
 ; Keymasks to remove modifers from the scan results
 KEYMASK DC.B	$FF,$DF,$FF,$DF,$DF,$DF,$FF,$DF,$D6,$DE
 ; Which bits indicate shift keys
-SHIFTMASK DC.B  $00,$000,$00,$00,$00,$00,$00,$00,$21,$00
+SHIFTMASK DC.B  $00,$00,$00,$00,$00,$00,$00,$00,$21,$00
 ; Which bits indicate ctrl keys
 CTRLMASK DC.B   $00,$00,$00,$00,$00,$00,$00,$00,$08,$01
 
