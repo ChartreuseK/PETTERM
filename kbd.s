@@ -10,22 +10,22 @@ KBDPOLL		SUBROUTINE
 	LDA	#0
 	STA	CTRL
 	STA	SHIFT
-	LDY	#9 		; Keyboard matrix is 10x8
+	LDY	#9 		; Keyboard matrix is 10x8 (9->0)
 
 .loop	STY	PIA1_PA		; Set scan row	
 	LDA	PIA1_PB		; Read in row
-	EOR 	#$FF		; Invert bits so that 1 means set
-	TAX			; Save A
-	AND	SHIFTMASK,Y
+	EOR 	#$FF		; Invert bits so that 1 means pressed
+	TAX			; Save scanned value
+	AND	SHIFTMASK,Y	; Check if shift pressed for this row
 	BEQ	.noshift
 	STA	SHIFT		; Non-zero value indicates shift was pressed
 .noshift
-	TXA
-	AND	CTRLMASK,Y
+	TXA			; Restore scancode
+	AND	CTRLMASK,Y	; Check if ctrl pressed for this row
 	BEQ	.noctrl
 	STA	CTRL		; Non-zero value indicates ctrl was pressed
-.noctrl TXA
-	AND	KEYMASK,Y
+.noctrl TXA			; Restore scancode
+	AND	KEYMASK,Y	; Mask out modifiers
 	BEQ	.nextrow	; No key was pressend in this row
 	; Found a keypress, convert to an index in the table
 	STA	KBDTMP
@@ -100,25 +100,6 @@ LOG2_TBL DC.B -1,7,6,6,5,5,5,5,4,4,4,4,4,4,4,4
          DC.B 3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3
          DC.B 2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2
          DC.B 2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2
-
-;LOG2_TBL DC.B -1,0,1,1,2,2,2,2,3,3,3,3,3,3,3,3
-;         DC.B 4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4
-;         DC.B 5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5
-;         DC.B 5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5
-; To save 192 bytes, we'll can test bits 7 and 6 using BIT
-;         DC.B 6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6
-;         DC.B 6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6
-;         DC.B 6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6
-;         DC.B 6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6
-;         DC.B 7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7
-;         DC.B 7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7
-;         DC.B 7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7
-;         DC.B 7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7
-;         DC.B 7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7
-;         DC.B 7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7
-;         DC.B 7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7
-;         DC.B 7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7
-
 
 
 	
