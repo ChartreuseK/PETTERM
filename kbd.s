@@ -1,4 +1,102 @@
 
+; Poll a single row (58/63 cycles) 
+; Assumes KROW has been setup, and SHIFT and CTRL are cleared before the first call
+KBDROWPOLL	SUBROUTINE	;6;
+	LDY	KROW		;3;
+	STY	PIA1_PA		;4; Set scan row
+	LDA	PIA1_PB		;4; Read in row
+	EOR	#$FF		;2; Invert
+	TAX			;2; Save
+	AND	SHIFTMASK,Y	;4; Is a modifier pressed?
+	ORA	SHIFT		;3; OR into shift if so
+	STA	SHIFT		;3;
+	TXA			;2;
+	AND	CTRLMASK,Y	;4; Is a modifier pressed?
+	ORA	CTRL		;3; OR into ctrl if so
+	STA	CTRL		;3;
+	TXA			;2;
+	AND	KEYMASK,Y	;4; Mask out modifier keys
+	BEQ	.nokey		;2/3 Do we have a keypress in this row?
+	STY	KROWFND		;3; Found keypress in this row
+	STA	KBITFND		;3; Saved bitmask
+.nokey
+	INC	KROW
+	RTS			;6;
+	; KBITFND and KROWFND will be set to the last key press found
+	; if one is found, with CTRL and SHIFT non-zero if modifer pressed
+
+; Setup for start of a keyboard polling by rows (29 cycles)
+KBDROWSETUP	SUBROUTINE	;6;
+	LDA	#0		;2;
+	STA	KROW		;3;
+	STA	SHIFT		;3;
+	STA	CTRL		;3;
+	STA	KROWFND		;3;
+	STA 	KBITFND		;3; If KBITFND clear at end of polling then no key pressed
+	RTS			;6
+
+; If a key way pressed in the polling convert to a scancode
+; Returns pressed key or 0
+; 90 cycles worst case
+KBDROWCONV	SUBROUTINE	;6;
+	LDA	KBITFND		;3;
+	TAX			;2
+	BEQ	.nokey		;2/3
+	BIT	KBITFND		;4;Test bits 6 and 7 of mask
+	BMI	.k7		;2/3
+	BVS	.k6		;2/3
+	LDA	LOG2_TBL,X	;4; Get the highest bit pressed (6 and 7 are clear)
+.found:	; We've got the column of our bitpress in A
+	STA	KBITFND		;3; Overwrite bitmask with column to save
+	LDA	KROWFND		;3; Each row is 8 long, so we need to multiply by 8
+	ASL			;2; *2
+	ASL			;2; *4
+	ASL			;2; *8
+				; CLC Not needed, KEYOFF's top 3 bits are 0
+	ADC	KBITFND		;3; A now contains our offset into the tables
+	TAX			;2; Save into X
+	
+	LDA	SHIFT		;3;
+	BEQ	.notshift	;2/3
+	; Shift pressed, read upper table
+	LDA	KBDMATRIX_SHIFT,X	;4;
+	RTS			;6 (57/59 cycles to here)
+.notshift
+	LDA	KBDMATRIX,X	;4;
+	BMI	.special	;2/3; Don't have control modify special keys
+	LDA	CTRL		;3;
+	BEQ	.notctrl	;2/3
+	; Ctrl pressed, read lower table and bitmask to CTRL keys
+	LDA	KBDMATRIX,X	;4;
+	AND	#$9F		;2;
+.special			; 
+	RTS			;6; (71/73 if we didn't take .special)
+				;   (61/63 if we took .special)
+.notctrl	
+	LDA	MODE1		;3; Check mode
+	AND	#MODE1_CASE	;2; Check if we need to do case fixing (all upper)
+	BEQ	.casefix	;2/3;
+	; Normal key
+	LDA	KBDMATRIX,X	;4;
+	RTS			;6; (77/79 to here)
+.casefix
+	LDA	KBDMATRIX,X	;4;
+	CMP	#$61		;2; a
+	BCC	.nocasefix	;2/3; <'a' don't change
+	CMP	#$7B		;2; z+1
+	BCS	.nocasefix	;2/3; >='z'+1 don't change
+	ORA	#$20		;2; Convert lowercase to uppercase
+.nocasefix
+	RTS			;6; (88/90 max to here)
+
+.k7	LDA	#0		;2; Table is backwards
+	BEQ	.found		;3;
+.k6	LDA	#1		;2;
+	BNE	.found		;3;
+.nokey
+	RTS			;6; (20 cycles to here)
+
+
 
 
 ;----------------------------------------------------------------------
@@ -171,7 +269,7 @@ KR9	DC.B	 '=, '.,$EF,$03, '<, ' , '[,$FF
 
 ; Keymasks to remove modifers from the scan results
 KEYMASK DC.B	$FF,$DF,$FF,$DF,$DF,$DF,$FF,$DF,$D6,$DE
-; Which bits indicate shift keys
+; Which bits indicate shift keys:
 SHIFTMASK DC.B  $00,$00,$00,$00,$00,$00,$00,$00,$21,$00
 ; Which bits indicate ctrl keys
 CTRLMASK DC.B   $00,$00,$00,$00,$00,$00,$00,$00,$08,$01

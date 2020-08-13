@@ -6,12 +6,7 @@ GETCH	SUBROUTINE
 	CPX	RXBUFW
 	BEQ	GETCH		; Loop till we get a character in
 	LDA	RXBUF,X		; New character
-	TAX			; Save
 	INC	RXBUFR		; Acknowledge byte by incrementing 
-	LDA	RXBUFR		; Ring buffer
-	AND	#$F
-	STA	RXBUFR
-	TXA
 	RTS
 
 	
@@ -38,12 +33,17 @@ SERINIT	SUBROUTINE
 	LDA	POLLINT,X	; Set keyboard polling interval based
 	STA	POLLRES		; on current baud/timer rate
 	STA	POLLTGT
-	
 
 	LDA	#0
 	STA	RXBUFW
 	STA	RXBUFR
+	STA	KFAST
 
+	CPX	#3		; Use fast keyboard scanning above 600
+	BCS	.slow
+	LDA	#$FF		; Fast/split keyboard scanning
+	STA	KFAST		
+.slow
 	RTS
 
 
@@ -115,45 +115,7 @@ SERTX	SUBROUTINE
 	STA	TXSTATE
 .done
 	RTS
-	
 
-
-
-;#######################################################################
-; Device dependent routines
-;-----------------------------------------------------------------------
-; May need to be modified depending on hardware used
-;#######################################################################
-	
-;
-;               -          C                   A
-;               E S   1100   0010   E S   1000  0010    
-RXSAMPL	DC.B	1,0,1,1,0,0,0,0,1,0,1,0,1,0,0,0,0,0,1,0,$FF
-TMP3	DC.B	0
-	
-; Mock up serial Rx for development with the emulator
-MOCKRX  SUBROUTINE
-	LDY	TMP3
-	LDA	RXSAMPL,Y
-	CMP	#$FF
-	BNE	.no
-	LDY	#$FF		; -1, inc'd to 0
-.no	
-	INY	
-	STY	TMP3
-	LDA	RXSAMPL,Y
-	AND	#$01		; Only the low bit matters
-	STA	RXSAMP
-	RTS
-;-----------------------------------------------------------------------
-; Sample the Rx pin into RXSAMP
-; 1 for high, 0 for low
-; NOTE: If we want to support inverse serial do it in here, and SETTX
-SAMPRX	SUBROUTINE
-	LDA	VIA_PORTA
-	AND	#$01		; Only read the Rx pin
-	STA	RXSAMP
-	RTS
 
 ;-----------------------------------------------------------------------
 ; Set Tx pin to value in A

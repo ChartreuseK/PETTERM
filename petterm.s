@@ -92,6 +92,8 @@
 	REND
 ;-----------------------------------------------------------------------
 
+; RX Ring buffer takes up whole of page 3 ($3xx)
+
 ;-----------------------------------------------------------------------
 ; GLOBAL Defines
 ;-----------------------------------------------------------------------
@@ -179,12 +181,13 @@ INIT	SUBROUTINE
 	LDA	#0
 	STA	SERCNT
 	STA	TXTGT		; Fire Immediatly
-	STA	RXTGT		; Fire immediatly
 	STA	RXBUFW
 	STA	RXBUFR
 	STA	TXNEW		; No bytes ready
 	STA	ROW
 	STA	COL
+	STA	KFAST
+
 	; Set-up screen
 	STA	CURLOC
 	LDA	#$80
@@ -218,6 +221,7 @@ INIT	SUBROUTINE
 	LDA	#SCLM_UPPER	; Default mode is uppercase only
 	STA	SC_LOWERMOD
 	
+	JSR	SERINIT
 	
 	; Fall into START
 ;-----------------------------------------------------------------------
@@ -255,9 +259,6 @@ START	SUBROUTINE
 	LDA	RXBUF,X		; New character
 	TAX			; Save
 	INC	RXBUFR		; Acknowledge byte by incrementing 
-	LDA	RXBUFR		; Ring buffer
-	AND	#$F
-	STA	RXBUFR
 	TXA
 	JSR	PARSECH
 
@@ -330,6 +331,7 @@ START	SUBROUTINE
 	; Convert F1-F4 to 'A'-'D' (41-44)
 	AND	#$4F
 	JSR	SENDCH
+
 	JMP	.loop
 
 
@@ -437,9 +439,6 @@ IRQHDLR	SUBROUTINE ; 36 cycles till we hit here from IRQ firing
 	STA	RXBUF,X
 	
 	INC	RXBUFW
-	LDA	RXBUFW
-	AND	#$F
-	STA	RXBUFW
 
 	
 	LDA	#$22		; Disable timer 2 interrupt and CA1
@@ -448,20 +447,23 @@ IRQHDLR	SUBROUTINE ; 36 cycles till we hit here from IRQ firing
 	STA	VIA_IER
 	; Clear any CA1 interrupt soruce
 	LDA	VIA_PORTAH
-	BNE	.exit
+	JMP	.exit
 
 .tim2retrig
 	LDX	BAUD		;3
 	LDA	TIM2BAUDL,X	;4
 	STA	VIA_TIM2L	;4
 	LDA	TIM2BAUDH,X	;4
-	STA	VIA_TIM2H	;4- From start of IRQ to here is 93 ($5D) cycles!, need to subtract from BAUDTBL
+	STA	VIA_TIM2H	;4<--From start of IRQ to here is 93 ($5D) cycles!, need to subtract from BAUDTBL
 	JMP	.exit
 	;--------------------------------
 .tim1
 	LDA	VIA_TIM1L
 	; Transmit next bit if sending
 	JSR	SERTX		; Use old routine for now
+	;LDA	KFAST
+	;BNE	.fastkbd
+	JMP	.fastkbd
 	; Do keyboard polling after
 	DEC	POLLTGT		; Check if we're due to poll
 	BNE	.exit
@@ -480,6 +482,37 @@ IRQHDLR	SUBROUTINE ; 36 cycles till we hit here from IRQ firing
 	LDA	#$FF
 	STA	KBDNEW		; Signal a pressed key
 	BNE	.exit	
+
+.fastkbd
+	LDA	POLLTGT
+	BEQ	.final		; 0 
+	CMP	#$11
+	BEQ	.first		; 12
+	; One of the 10 scanning rows ;1-11
+	JSR	KBDROWPOLL
+	DEC	POLLTGT
+	;;;INC	SCRMEM+80
+	JMP	.exit
+.first	
+	JSR	KBDROWSETUP
+	DEC	POLLTGT
+	;;;INC	SCRMEM+40
+	JMP	.exit
+.final
+	LDA	POLLRES
+	STA	POLLTGT		; Reset polling counter
+	;;;INC	SCRMEM+120
+	JSR	KBDROWCONV
+	;;;STA	SCRMEM+0
+
+	CMP	KBDBYTE		; Check if same byte as before
+	STA	KBDBYTE
+	BEQ	.exit		; Don't signal the key for a repeat
+	LDA	KBDBYTE		
+	BEQ	.exit		; Don't signal for no key pressed
+	LDA	#$FF
+	STA	KBDNEW		; Signal a pressed key
+	BNE	.exit		; Always
 	;--------------------------------	
 .ca1
 	LDA	VIA_PORTAH	; Acknowledge int

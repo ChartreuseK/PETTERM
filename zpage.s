@@ -5,13 +5,13 @@
 
 SERCNT	DS.B	1		; Current sample number
 TXTGT	DS.B	1		; Sample number of next send event
-RXTGT	DS.B	1		; Sample number of next recv event
+;RXTGT	DS.B	1		; Sample number of next recv event
 TXCUR	DS.B	1		; Current byte being transmitted
 RXCUR	DS.B	1		; Current byte being received
 TXSTATE	DS.B	1		; Next Transmit state
 TXBIT	DS.B	1		; Tx data bit #
 RXBIT	DS.B	1		; Rx data bit #
-RXSAMP	DS.B	1		; Last sampled value
+;RXSAMP	DS.B	1		; Last sampled value
 
 TXBYTE	DS.B	1		; Next byte to transmit
 TXNEW	DS.B	1		; Indicates to start sending a byte
@@ -37,6 +37,11 @@ KEY	DS.B	1
 SHIFT	DS.B	1
 CTRL	DS.B	1
 
+KROW	DS.B 1			; Temp variables for split/fast key scanning
+KROWFND	DS.B 1
+KBITFND	DS.B 1
+
+
 MODE1	DS.B	1		; 76543210
 				; |||||
 				; ||||| 
@@ -58,9 +63,9 @@ PARSTKL	EQU	4		; Allow up to 4 arguments for ANSI parsing
 PARSTK	DS.B	PARSTKL		
 
 
-RXBUF	DS.B	16		; Ring buffer of recieved chars
 RXBUFW	DS.B	1		; Write pointer
 RXBUFR	DS.B	1		; Read pointer
+KFAST	DS.B	1		; 0 if slow/normal scanning, 1 for fast split scanning
 
 ; Make sure not to use $90-95 these are Vectors for BASIC 2+
 	RORG	$90
