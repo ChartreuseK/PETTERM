@@ -168,6 +168,10 @@ PRINTCH_TAB
 PUTCH	SUBROUTINE
 	STA	LASTCH
 	JSR	SCRCONV		; Convert ASCII to screen representation
+	LDX	ATTR
+	BEQ	.noinv
+	EOR	#$80		; Inverse video
+.noinv
 	LDY	#0 
 	STA	(CURLOC),Y	; Store to current position
 	; Advance to the next position
@@ -207,7 +211,7 @@ PUTCH	SUBROUTINE
 ; If this is too slow and we have RAM avail, then use a straight lookup table
 ; ( Ie TAX; LDA LOOKUP,X; RTS )
 SCRCONV	SUBROUTINE
-	CMP	#$40		; <$41 don't adjust
+	CMP	#$41		; <$41 don't adjust
 	BCC	.done
 	CMP	#$5A		; $41 to $5A are 'uppercase' letters
 	BCC	.upper

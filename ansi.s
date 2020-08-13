@@ -529,6 +529,7 @@ A_SGR		SUBROUTINE
 	INX
 	CPX	ANSISTKI
 	BCC	.loop
+	BEQ	.loop
 	RTS
 
 ;----------------------------------------------

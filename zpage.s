@@ -62,7 +62,8 @@ ANSISTKI DS.B	1
 ANSIIN	DS.B	1		; Are we inside an escape sequence
 ANSIINOS DS.B	1		; Are we inside an os string (to ignore)
 
-
+DLYSCROLL DS.B	1		; If non-zero, scrolling has been delayed and needs to happen on next character
+				; (Used so that the cursor can sit on the last column of screen)
 
 LASTCH	DS.B	1		; Last printable character drawn to screen
 
