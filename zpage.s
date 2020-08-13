@@ -45,6 +45,7 @@ MODE1	DS.B	1		; 76543210
 				; ||+------ 1 = Inverse case 0 = normal
 				; |+------- 1 = Mixed case  0 = UPPER CASE
 				; +-------- 1 = local echo
+ATTR	DS.B	1		; 0 = normal, non-zero = reverse video
 				
 SC_UPPERMOD	DS.B	1	; Modifier for uppercase letters, added to ch
 	; -$40 for UPPERONLY, +$20 for MIXED?
@@ -54,9 +55,16 @@ SC_LOWERMOD	DS.B	1	; Modifier for lowercase letters, added to ch
 KEYOFF	DS.B	1		; Keyboard matrix offset for shift
 KBDTMP	DS.B 	1		; Keyboard scanning temp, to allow BIT instruction
 
-PARSTKL	EQU	4		; Allow up to 4 arguments for ANSI parsing
-PARSTK	DS.B	PARSTKL		
+ANSISTKL	EQU	16	; Allow up to 16 arguments (any more will just be dropped)
+ANSISTK	DS.B	ANSISTKL	; The commands we support mainly take 1 or 2, though SGR 
+				; could have a long chain of attributes
+ANSISTKI DS.B	1
+ANSIIN	DS.B	1		; Are we inside an escape sequence
+ANSIINOS DS.B	1		; Are we inside an os string (to ignore)
 
+
+
+LASTCH	DS.B	1		; Last printable character drawn to screen
 
 RXBUF	DS.B	16		; Ring buffer of recieved chars
 RXBUFW	DS.B	1		; Write pointer

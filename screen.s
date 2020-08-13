@@ -121,6 +121,7 @@ PRINTCH SUBROUTINE
 	JSR	ADDCURLOC
 .bkspnw2
 	RTS
+PRINTCH_TAB
 .tab	
 	; Increment COL to next multiple of 8
 	LDA	COL
@@ -163,17 +164,16 @@ PRINTCH SUBROUTINE
 ; Write a character to the current position
 ; A - character to write
 PUTCH	SUBROUTINE
+	STA	LASTCH
 	JSR	SCRCONV		; Convert ASCII to screen representation
 	LDY	#0 
 	STA	(CURLOC),Y	; Store to current position
 	; Advance to the next position
-	LDA	#1		; 16-bit increment
-	CLC
-	ADC	CURLOC
-	STA	CURLOC
-	LDA	#0
-	ADC	CURLOC+1
-	STA	CURLOC+1
+	INC	CURLOC
+	BNE	.nocarry
+	INC	CURLOC+1
+.nocarry
+	
 
 	INC	COL		; Advance to the right
 	LDA	COL		
@@ -321,6 +321,7 @@ CURSR
 	JMP	ADDCURLOC
 CURNONE
 	RTS
+
 
 ;-----------------------------------------------------------------------
 ; Set cursor position on the screen
