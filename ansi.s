@@ -408,8 +408,36 @@ A_ERALINE	SUBROUTINE
 	CPY	#1
 	BEQ	.tostart	; Erase to start of line
 	; Otherwise erase entire line
+	JSR	.tostart
 .toend
+	LDX	COL
+	LDA	#$20		; Clear fill character
+	LDY	#0
+.loope
+	STA	(CURLOC),Y
+	INY
+	INX
+	CPX	#SCRCOL
+	BNE	.loope
+	RTS
 .tostart
+	LDA	COL
+	PHA			; Save column
+	LDX	#0
+	LDY	ROW
+	JSR	GOTOXY		; Go to start of this line
+	PLA			; Restore column
+	TAY
+	STY	COL		; COL now disjoint from CURLOC
+	LDA	#$20		; Clear fill character
+.loops
+	STA	(CURLOC),Y
+	DEY
+	BNE	.loops
+	STA	(CURLOC),Y	; Don't forget first column
+	LDX	COL
+	LDY	ROW
+	JSR	GOTOXY		; Restore cursor to where we started
 	RTS
 
 ;----------------------------------------------

@@ -118,7 +118,9 @@ PRINTCH SUBROUTINE
 .bkspnw
 	DEC	COL
 	LDA	#-1
-	JSR	ADDCURLOC
+	LDX	COL
+	LDY	ROW
+	JSR	GOTOXY
 .bkspnw2
 	RTS
 PRINTCH_TAB
@@ -242,85 +244,7 @@ SCRCONVTBL
 										; DEL becomes half shaded box
 
 
-;-----------------------------------------------------------------------
-; Add sign-extended A to CURLOC	
-; A - signed 8-bit displacement
-; If CURLOC+A exceeds screen then don't change
-ADDCURLOC	SUBROUTINE
-	TAX
-	CLC
-	ADC	CURLOC
-	STA	CURLOC
-	TXA
-	ORA	#$7F		; Sign extend A
-	BMI	.minus
-	LDA	#0
-.minus				; Sign extended A now in A
-	ADC	CURLOC+1	; Add to upper byte
-	STA	CURLOC+1
-	
-	; Check if we fit
-	RTS
-	TXA			; Restore A
-	EOR	#$FF		; Invert
-	SEC			; Add 1
-	ADC	#0		; (Negate A)
-	JSR	CHKBOUNDS
-	BCS	ADDCURLOC	; If out of bounds, invert add
-	RTS
-	
-;-----------------------------------------------------------------------
-; Check CURLOC is within the screen. 
-; Carry set on fail, clear on pass
-CHKBOUNDS	SUBROUTINE
-	LDA	CURLOC+1
-	CMP	#$80		; Start of screen is $8000
-	BCC	.fail
-	CMP	#>SCREND	; Past end of screen
-	BEQ	.testlow	; Test low byte if high is the end
-	BCS	.fail		
-.pass
-	CLC
-	RTS
-.testlow
-	LDA	CURLOC
-	CMP	#(<SCREND)+1
-	BCC	.pass		
-.fail
-	SEC
-	RTS
 
-;-----------------------------------------------------------------------
-; Cursor movement
-; Moves cursor one position for each direction.
-CURSUP	SUBROUTINE
-	LDA	ROW
-	BEQ	CURNONE
-	DEC	ROW
-	LDA	#-(SCRCOL)	; Subtract one row
-	JMP	ADDCURLOC
-CURSDN
-	LDA	ROW
-	CMP	#ROWMAX-1
-	BEQ	CURNONE
-	INC	ROW
-	LDA	#(SCRCOL)	; Add one row
-	JMP	ADDCURLOC
-CURSL
-	LDA	COL
-	BEQ	CURNONE
-	DEC	COL
-	LDA	#-1
-	JMP	ADDCURLOC
-CURSR
-	LDA	COL
-	CMP	#COLMAX-1
-	BEQ	CURNONE
-	INC	COL
-	LDA	#1
-	JMP	ADDCURLOC
-CURNONE
-	RTS
 
 
 ;-----------------------------------------------------------------------
