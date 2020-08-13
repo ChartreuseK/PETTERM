@@ -491,19 +491,15 @@ IRQHDLR	SUBROUTINE ; 36 cycles till we hit here from IRQ firing
 	; One of the 10 scanning rows ;1-11
 	JSR	KBDROWPOLL
 	DEC	POLLTGT
-	;;;INC	SCRMEM+80
 	JMP	.exit
 .first	
 	JSR	KBDROWSETUP
 	DEC	POLLTGT
-	;;;INC	SCRMEM+40
 	JMP	.exit
 .final
 	LDA	POLLRES
 	STA	POLLTGT		; Reset polling counter
-	;;;INC	SCRMEM+120
 	JSR	KBDROWCONV
-	;;;STA	SCRMEM+0
 
 	CMP	KBDBYTE		; Check if same byte as before
 	STA	KBDBYTE
