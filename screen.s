@@ -108,10 +108,8 @@ PRINTCH SUBROUTINE
 	LDA	#0
 	STA	DLYSCROLL	; Reset delayed scrolling
 	LDA	COL
-	CMP	#0
 	BNE	.bkspnw
 	LDA	ROW
-	CMP	#0
 	BEQ	.bkspnw2
 
 	DEC	ROW
@@ -119,7 +117,6 @@ PRINTCH SUBROUTINE
 	STA	COL
 .bkspnw
 	DEC	COL
-	LDA	#-1
 	LDX	COL
 	LDY	ROW
 	JSR	GOTOXY
@@ -156,29 +153,20 @@ PRINTCH_TAB
 	JSR	SCROLL
 	LDY	#ROWMAX-1
 .nlrow
-	STY	ROW
 	LDX	COL
 	JMP	GOTOXY
 	
 .normal
-;	LDX	DLYSCROLL
-;	BEQ	PUTCH		; No delayed scrolling
-;	INC	DLYSCROLL	; Reset to 0
-;	; A scroll was postponed, do it now
-;	LDX	ROW
-;	CMP	#ROWMAX-1
-;	BCS	.doscroll
-;	; Simple case we just need to increment and go to 0
-;	INC	ROW
-;	LDY	ROW
-;	LDX	#0
-;	JSR	GOTOXY
-;	JMP	PUTCH
-.;doscroll
-;	JSR	SCROLL
-;	LDX	#0
-;	LDY	ROW
-;	JSR	GOTOXY
+	LDX	DLYSCROLL
+	BEQ	PUTCH		; No delayed scrolling
+	LDX	#0
+	STX	DLYSCROLL	; Reset to 0
+	; A scroll was postponed, do it now
+.doscroll
+	JSR	SCROLL
+	LDX	#0
+	LDY	#ROWMAX-1
+	JSR	GOTOXY
 	; Fall into PUTCH
 ;-----------------------------------------------------------------------
 ; Write a character to the current position
@@ -197,32 +185,25 @@ PUTCH	SUBROUTINE
 	BNE	.nocarry
 	INC	CURLOC+1
 .nocarry
-	
-
 	INC	COL		; Advance to the right
 	LDA	COL		
 	CMP	#COLMAX
 	BCC	.done		; If < COLMAX then don't wrap back
 	; Setup delayed scrolling
-;	LDA	#$FF
-;	STA	DLYSCROLL
+	LDA	ROW
+	CMP	#ROWMAX-1
+	BNE	.scroll
+	LDA	#$FF
+	STA	DLYSCROLL
+	RTS
+.scroll
 	LDA	#0		; Reset to column 0
 	STA	COL
 	INC	ROW		; Advance to the next row
-	; Check if we wrote the character in the bottom right
-	; and need to scroll the screen
-	LDA	ROW
-	CMP	#ROWMAX	
-	BCC	.done		; ROW < ROWMAX, Still on the screen
-	DEC	ROW		; We went past the end, return to the last line
-	; Need to scroll the screen
-	JSR	SCROLL
-	; Move cursor pointer to the bottom left corner
-	LDA	#<SCRBTML
-	STA	CURLOC
-	LDA	#>SCRBTML
-	STA	CURLOC+1
 .done
+	LDX	COL
+	LDY	ROW
+	JSR	GOTOXY
 	RTS
 
 
