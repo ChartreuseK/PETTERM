@@ -180,16 +180,21 @@ CTRLMASK DC.B   $00,$00,$00,$00,$00,$00,$00,$00,$08,$01
 ; Matrix for Graphics keyboards 
 KBDMATRIX_SHIFT
 SKR0	DC.B	$F4,$F0,$5F, '(, '&, '%, '#, '!
-SKR1	DC.B	$08,$F1,$EF, '), '\, '', '$, '"   ;";
-SKR2	DC.B	 '9, '7, '^, 'O, 'U, 'T, 'E, 'Q
+SKR1	DC.B	$08,$F1,$EF, '), '\, '`, '$, '"   ;";
+SKR2	DC.B	 '9, '7, '|, 'O, 'U, 'T, 'E, 'Q
 SKR3	DC.B	 '/, '8,$EF, 'P, 'I, 'Y, 'R, 'W
 SKR4	DC.B	 '6, '4,$EF, 'L, 'J, 'G, 'D, 'A
 SKR5	DC.B	 '*, '5,$EF, ':, 'K, 'H, 'F, 'S
 SKR6	DC.B	 '3, '1,$0D, ';, 'M, 'B, 'C, 'Z
 SKR7	DC.B	 '+, '2,$EF, '?, ',, 'N, 'V, 'X
-SKR8	DC.B	 '-, '0,$00, '>,$FF, '], '@,$00
-SKR9	DC.B	 '=, '.,$EF,$03, '<, ' , '[,$FF
+SKR8	DC.B	 '-, '0,$00, '>,$FF, '}, '~,$00
+SKR9	DC.B	 '=, '.,$EF,$03, '<, ' , '{,$FF
 	ENDIF
 
 
 
+; Custom keys for graphic keyboards
+; Shift + []   = {}
+; Shift + '    = `
+; Shift + @    = ~
+; Shift + ^ (up arrow) = |
