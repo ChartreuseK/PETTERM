@@ -181,9 +181,42 @@ CSITBL:
 
 
 ;----------------------------------------------
-; @ - Insert characters
-;  (Painfully slow, requires copying characters forward till end of screen)
+; @ - Insert characters (copy forward to end of line)
 A_INSCHR	SUBROUTINE
+	BNE	.nofix1
+	INC	ANSISTK+0	; 
+.nofix1
+	; TODO: Cap count to SCRCOL-COL
+
+
+	LDA	CURLOC
+	CLC
+	ADC	ANSISTK+0
+	STA	TMPA
+	LDA	CURLOC+1
+	ADC	#0
+	STA	TMPA+1		; TMPA is now the destination, CURLOC is source
+
+	LDA	#SCRCOL		; Number of bytes to copy = SCRCOL-COL-count
+	SEC
+	SBC	COL
+	SEC
+	SBC	ANSISTK+0
+	TAY			; Number of bytes to copY
+.copyl
+	LDA	(CURLOC),Y	; Copy forward till we're copying from the current character
+	STA	(TMPA),Y	
+	DEY
+	BPL	.copyl		; We've now copied forward all the characters, replace new with fill
+	; Clear count characters
+	LDA	#$20		; Clear fill character
+	LDY	ANSISTK+0
+	DEY
+.clrl
+	STA	(CURLOC),Y
+	DEY
+	BPL	.clrl
+	
 	RTS
 
 ;----------------------------------------------
@@ -192,6 +225,9 @@ A_CURUP		SUBROUTINE
 	BNE	.noadj
 	INY			; Convert 0 to 1
 .noadj
+	LDA	#0
+	STA	DLYSCROLL	; Reset delayed scrolling
+	
 	CPY	ROW		; Check if subtraction would underflow
 	BCS	.zero		; If up movement >= row, then go to line 0
 	; Otherwise subtract Y from ROW
@@ -214,6 +250,9 @@ A_CURDOWN	SUBROUTINE
 	BNE	.noadj
 	INY			; Convert 0 to 1
 .noadj
+	LDA	#0
+	STA	DLYSCROLL	; Reset delayed scrolling
+	
 	CPY	#SCRROW		; Check if addition would hit the bottom
 	BCS	.end		; If up movement > hight, then go to line SCRROW
 	; Otherwise add Y to row (and cap)
@@ -239,6 +278,9 @@ A_CURRIGHT	SUBROUTINE
 	BNE	.noadj
 	INY			; Convert 0 to 1
 .noadj
+	LDA	#0
+	STA	DLYSCROLL	; Reset delayed scrolling
+	
 	CPY	#SCRCOL		; Check if addition would hit the right
 	BCS	.end		; If up movement > width, then go to right edge
 	; Otherwise add Y to row (and cap)
@@ -263,6 +305,9 @@ A_CURLEFT	SUBROUTINE
 	BNE	.noadj
 	INY			; Convert 0 to 1
 .noadj
+	LDA	#0
+	STA	DLYSCROLL	; Reset delayed scrolling
+	
 	CPY	COL		; Check if subtraction would underflow
 	BCS	.zero		; If up movement >= col, then go to col 0
 	; Otherwise subtract Y from COL
@@ -282,6 +327,9 @@ A_CURLEFT	SUBROUTINE
 ;----------------------------------------------
 ; E - Cursor Next Line
 A_CURNEXT	SUBROUTINE
+	LDA	#0
+	STA	DLYSCROLL	; Reset delayed scrolling
+	
 	LDX	#0
 	STX	COL
 	CPY	#0		; Reset flags based on Y
@@ -290,6 +338,10 @@ A_CURNEXT	SUBROUTINE
 ;----------------------------------------------
 ; F - Cursor Prev. Line
 A_CURPREV	SUBROUTINE
+
+	LDA	#0
+	STA	DLYSCROLL	; Reset delayed scrolling
+	
 	LDX	#0
 	STX	COL
 	CPY	#0		; Reset flags based on Y
@@ -302,6 +354,9 @@ A_CURCOL	SUBROUTINE
 	BEQ	.nofix		; If 0 stay as 0
 	DEY			; Absolute is 1 based, convert to 0
 .nofix
+	LDA	#0
+	STA	DLYSCROLL	; Reset delayed scrolling
+	
 	CPY	#SCRCOL
 	BCC	.nocap		; < COLS
 	LDY	#SCRCOL-1	; Cap at right side if > SCRCOL
@@ -318,6 +373,9 @@ A_CURABS	SUBROUTINE
 	BEQ	.nofixy		; If 0 stay as 0
 	DEY			; Absolute is 1 based, convert to 0
 .nofixy
+	LDA	#0
+	STA	DLYSCROLL	; Reset delayed scrolling
+	
 	CPY	#SCRROW
 	BCC	.nocapy		; < ROWS
 	LDY	#SCRROW-1	; Cap at bottom of screen
@@ -390,14 +448,14 @@ A_ERA		SUBROUTINE
 .loopb
 	STA	(TMPA),Y
 	
-	LDY	TMPA		; Set z flag
-	BNE	.nocarryb
-	DEC	TMPA+1
+	LDX	TMPA		; Set z flag
+	BNE	.nocarryb	; If not 0 then no carry
+	DEC	TMPA+1		; Carry
 .nocarryb
 	DEC	TMPA
 	
 	LDX	TMPA+1
-	CPX	#>(SCRMEM-1)
+	CPX	#>(SCRMEM-1)	; Check if we underflowed the screen region
 	BNE	.loopb		; > start of screen
 	RTS			; And we're done
 
@@ -408,6 +466,7 @@ A_ERALINE	SUBROUTINE
 	CPY	#1
 	BEQ	.tostart	; Erase to start of line
 	; Otherwise erase entire line
+A_ERALINE_ENT
 	JSR	.tostart
 .toend
 	LDX	COL
@@ -422,37 +481,182 @@ A_ERALINE	SUBROUTINE
 	RTS
 .tostart
 	LDA	COL
-	PHA			; Save column
+	STA	TMP1		; Save column
 	LDX	#0
 	LDY	ROW
 	JSR	GOTOXY		; Go to start of this line
-	PLA			; Restore column
-	TAY
-	STY	COL		; COL now disjoint from CURLOC
+	LDY	TMP1		; Start column
 	LDA	#$20		; Clear fill character
 .loops
 	STA	(CURLOC),Y
 	DEY
-	BNE	.loops
-	STA	(CURLOC),Y	; Don't forget first column
-	LDX	COL
+	BPL	.loops
+	
+	LDX	TMP1
 	LDY	ROW
 	JSR	GOTOXY		; Restore cursor to where we started
 	RTS
 
 ;----------------------------------------------
-; L - Insert lines
+; L - Insert lines (scroll lines below down one)
 A_INSLINE	SUBROUTINE
+	BNE	.loop
+	INC	ANSISTK+0
+.loop
+	JSR	.ins1
+	DEC	ANSISTK+0
+	BNE	.loop
 	RTS
+.ins1
+	LDA	COL
+	STA	TMP1		; Save column
+	LDA	ROW
+	STA	TMP2		; Save row
+
+	CMP	#SCRROW-1	; Are we at the bottom line?
+	BEQ	.clronly	; If so just clear the line instead
+	; Copy one line forward
+	LDY	#SCRROW-1	; Start from bottom
+.loop1
+	DEY
+	TYA
+	PHA			; Save on stack
+
+	LDX	#0
+	JSR	GOTOXY
+
+	LDA	CURLOC
+	STA	TMPA+0		; Source
+	CLC
+	ADC	#SCRCOL		; Forward one line
+	STA	TMPA2+0		; Dest
+
+	LDA	CURLOC+1
+	STA	TMPA+1		; Source
+	ADC	#0
+	STA	TMPA2+1		; Dest
+	
+	LDA	#SCRCOL
+	STA	CNT
+	JSR	MEMMOVE
+
+
+	PLA
+	TAY
+	CPY	TMP2		; Are we back at our starting row?
+
+	BNE	.loop1		; Go till we hit it
+	
+
+	; Clear starting row
+	LDX	TMP1
+	LDY	TMP2
+	JSR	GOTOXY		; Restore cursor
+
+.clronly
+	JSR	A_ERALINE_ENT	; Erase entire line
+	RTS
+
+
 ;----------------------------------------------
 ; M - Delete lines
 A_DELLINE	SUBROUTINE
+	BNE	.loop
+	INC	ANSISTK+0
+.loop
+	JSR	.del1
+	DEC	ANSISTK+0
+	BNE	.loop
+.skip
 	RTS
+
+.del1
+	LDA	COL
+	STA	TMP1		; Save column
+	LDA	ROW
+	STA	TMP2		; Save row
+
+	CMP	#SCRROW-1	; If we're at the bottom of the screen
+	BEQ	.clronly
+
+	; Copy one line backward
+	LDY	ROW		; Start at current and go to end
+.loop1
+	INY
+	TAY
+	PHA			; Save on stack
+
+	LDX	#0
+	JSR	GOTOXY
+
+	LDA	CURLOC
+	STA	TMPA2		; Dest (current line)
+	CLC
+	ADC	#SCRCOL		; Forward one line
+	STA	TMPA		; Source (next line)
+	LDA	CURLOC+1
+	STA	TMPA2+1		; Dest
+	ADC	#0
+	STA	TMPA+1		; Source
+	LDA	#SCRCOL
+	STA	CNT
+	JSR	MEMMOVE
+
+	PLA
+	TAY
+	CPY	#SCRROW-2	; Did we just copy from the last row on the screen
+	BNE	.loop1		; Go till we hit it
+	; Clear last row
+	LDX	#0
+	LDY	#SCRROW-1
+	JSR	GOTOXY		; Go to last line
+.clronly
+	JSR	A_ERALINE_ENT	; Erase entire line
+	LDX	TMP1
+	LDY	TMP2
+	JSR	GOTOXY		; Restore cursor
+	RTS
+
+
+
 ;----------------------------------------------
-; P - Delete characters (painfully slow, requires copying
-;  back characters till the end of the screen...)
+; P - Delete characters (within line)
 A_DELCHR	SUBROUTINE
+	BNE	.nofix
+	INC	ANSISTK+0	; 
+.nofix
+
+	LDA	CURLOC
+	CLC
+	ADC	ANSISTK+0
+	STA	TMPA
+	LDA	CURLOC+1
+	ADC	#0
+	STA	TMPA+1		; TMPA is now the source, CURLOC is dest
+
+	LDA	#SCRCOL		; Number of bytes to copy = SCRCOL-COL-count
+	SEC
+	SBC	COL
+	TAX			; Number of bytes to copy + count
+
+	LDY	#0
+.copyl
+	LDA	(TMPA),Y	; Copy backward till we're copying from the end
+	STA	(CURLOC),Y	; of the line
+	INY
+	DEX
+	CPX	ANSISTK+0	; Go till we hit the end of the line for copying
+	BNE	.copyl		; X will be number of bytes to clear when we hit the end
+	; Clear to the end of the line
+	LDA	#$20		; Clear fill character
+.clrl
+	STA	(CURLOC),Y
+	INY
+	DEX
+	BNE	.clrl
+	
 	RTS
+
 
 
 ; TODO: These scroll commands are going to be
@@ -461,10 +665,61 @@ A_DELCHR	SUBROUTINE
 ;----------------------------------------------
 ; S - Scroll up
 A_SCRUP		SUBROUTINE
+	BNE	.loop
+	INC	ANSISTK+0
+.loop
+	JSR	SCROLL
+	DEC	ANSISTK+0
+	BNE	.loop
 	RTS
 ;----------------------------------------------
-; T - Scroll down
+; T - Scroll down (Move lines downward)
 A_SCRDOWN	SUBROUTINE
+	BNE	.loop
+	INC	ANSISTK+0
+.loop
+	JSR	.scrdown
+	DEC	ANSISTK+0
+	BNE	.loop
+	RTS
+.scrdown
+	LDA	#<SCRMEM
+	STA	TMPA+0			; Source
+	LDA	#>SCRMEM
+	STA	TMPA+1
+	LDA	#<[SCRMEM+SCRCOL]
+	STA	TMPA2+0			; Dest
+	LDA	#>[SCRMEM+SCRCOL]
+	STA	TMPA2+1
+	LDA	#SCRCOL*1		; Scroll one line
+	STA	CNT
+
+	LDY	#SCRROW-1		; Number of rows to scroll
+	STY	TMP1
+
+.scrloop
+	JSR	MEMMOVE			; Scroll
+	; Go to next line
+	LDA	TMPA2+0
+	STA	TMPA+0
+	CLC
+	ADC	#SCRCOL
+	STA	TMPA2+0
+	LDA	TMPA2+1
+	STA	TMPA+1
+	ADC	#0
+	STA	TMPA2+1
+
+	DEC	TMP1
+	BNE	.scrloop
+
+	; Clear first line
+	LDA	#$20			; Fill character
+	LDY	#SCRCOL-1
+.clrloop
+	STA	SCRMEM,Y
+	DEY
+	BPL	.clrloop
 	RTS
 
 
@@ -537,3 +792,13 @@ A_SGR		SUBROUTINE
 
 
 
+; Move data from TMPA to TMPA2 for CNT bytes
+MEMMOVE	SUBROUTINE
+	LDY	#0
+.loop
+	LDA	(TMPA),Y
+	STA	(TMPA2),Y
+	INY
+	CPY	CNT
+	BNE	.loop
+	RTS

@@ -27,6 +27,8 @@ TMP2	DS.B	1
 
 TMPA	DS.W	1
 TMPA2	DS.W	1
+CNT	DS.B	1	
+
 
 POLLRES	DS.B	1		; KBD Polling interval for baud
 POLLTGT	DS.B	1		; Polling interval counter

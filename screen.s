@@ -105,13 +105,15 @@ PRINTCH SUBROUTINE
 	; Ignore other ctrl characters for now
 	RTS
 .bksp	
+	LDA	#0
+	STA	DLYSCROLL	; Reset delayed scrolling
 	LDA	COL
 	CMP	#0
 	BNE	.bkspnw
 	LDA	ROW
 	CMP	#0
 	BEQ	.bkspnw2
-	
+
 	DEC	ROW
 	LDA	#COLMAX
 	STA	COL
@@ -143,6 +145,7 @@ PRINTCH_TAB
 	
 .cr
 	LDX	#0
+	STX	DLYSCROLL	; Set COL=0, and reset delayed scrolling
 	LDY	ROW
 	JMP	GOTOXY
 .nl
@@ -158,10 +161,25 @@ PRINTCH_TAB
 	JMP	GOTOXY
 	
 .normal
-	JMP	PUTCH		; Tail call into PUTCH
-
-
-
+;	LDX	DLYSCROLL
+;	BEQ	PUTCH		; No delayed scrolling
+;	INC	DLYSCROLL	; Reset to 0
+;	; A scroll was postponed, do it now
+;	LDX	ROW
+;	CMP	#ROWMAX-1
+;	BCS	.doscroll
+;	; Simple case we just need to increment and go to 0
+;	INC	ROW
+;	LDY	ROW
+;	LDX	#0
+;	JSR	GOTOXY
+;	JMP	PUTCH
+.;doscroll
+;	JSR	SCROLL
+;	LDX	#0
+;	LDY	ROW
+;	JSR	GOTOXY
+	; Fall into PUTCH
 ;-----------------------------------------------------------------------
 ; Write a character to the current position
 ; A - character to write
@@ -185,6 +203,9 @@ PUTCH	SUBROUTINE
 	LDA	COL		
 	CMP	#COLMAX
 	BCC	.done		; If < COLMAX then don't wrap back
+	; Setup delayed scrolling
+;	LDA	#$FF
+;	STA	DLYSCROLL
 	LDA	#0		; Reset to column 0
 	STA	COL
 	INC	ROW		; Advance to the next row
