@@ -105,22 +105,24 @@ PRINTCH SUBROUTINE
 	; Ignore other ctrl characters for now
 	RTS
 .bksp	
+	LDA	#0
+	STA	DLYSCROLL	; Reset delayed scrolling
 	LDA	COL
-	CMP	#0
 	BNE	.bkspnw
 	LDA	ROW
-	CMP	#0
 	BEQ	.bkspnw2
-	
+
 	DEC	ROW
 	LDA	#COLMAX
 	STA	COL
 .bkspnw
 	DEC	COL
-	LDA	#-1
-	JSR	ADDCURLOC
+	LDX	COL
+	LDY	ROW
+	JSR	GOTOXY
 .bkspnw2
 	RTS
+PRINTCH_TAB
 .tab	
 	; Increment COL to next multiple of 8
 	LDA	COL
@@ -140,6 +142,7 @@ PRINTCH SUBROUTINE
 	
 .cr
 	LDX	#0
+	STX	DLYSCROLL	; Set COL=0, and reset delayed scrolling
 	LDY	ROW
 	JMP	GOTOXY
 .nl
@@ -150,52 +153,57 @@ PRINTCH SUBROUTINE
 	JSR	SCROLL
 	LDY	#ROWMAX-1
 .nlrow
-	STY	ROW
 	LDX	COL
 	JMP	GOTOXY
 	
 .normal
-	JMP	PUTCH		; Tail call into PUTCH
-
-
-
+	LDX	DLYSCROLL
+	BEQ	PUTCH		; No delayed scrolling
+	LDX	#0
+	STX	DLYSCROLL	; Reset to 0
+	; A scroll was postponed, do it now
+.doscroll
+	JSR	SCROLL
+	LDX	#0
+	LDY	#ROWMAX-1
+	JSR	GOTOXY
+	; Fall into PUTCH
 ;-----------------------------------------------------------------------
 ; Write a character to the current position
 ; A - character to write
 PUTCH	SUBROUTINE
+	STA	LASTCH
 	JSR	SCRCONV		; Convert ASCII to screen representation
+	LDX	ATTR
+	BEQ	.noinv
+	EOR	#$80		; Inverse video
+.noinv
 	LDY	#0 
 	STA	(CURLOC),Y	; Store to current position
 	; Advance to the next position
-	LDA	#1		; 16-bit increment
-	CLC
-	ADC	CURLOC
-	STA	CURLOC
-	LDA	#0
-	ADC	CURLOC+1
-	STA	CURLOC+1
-
+	INC	CURLOC
+	BNE	.nocarry
+	INC	CURLOC+1
+.nocarry
 	INC	COL		; Advance to the right
 	LDA	COL		
 	CMP	#COLMAX
 	BCC	.done		; If < COLMAX then don't wrap back
+	; Setup delayed scrolling
+	LDA	ROW
+	CMP	#ROWMAX-1
+	BNE	.scroll
+	LDA	#$FF
+	STA	DLYSCROLL
+	RTS
+.scroll
 	LDA	#0		; Reset to column 0
 	STA	COL
 	INC	ROW		; Advance to the next row
-	; Check if we wrote the character in the bottom right
-	; and need to scroll the screen
-	LDA	ROW
-	CMP	#ROWMAX	
-	BCC	.done		; ROW < ROWMAX, Still on the screen
-	DEC	ROW		; We went past the end, return to the last line
-	; Need to scroll the screen
-	JSR	SCROLL
-	; Move cursor pointer to the bottom left corner
-	LDA	#<SCRBTML
-	STA	CURLOC
-	LDA	#>SCRBTML
-	STA	CURLOC+1
 .done
+	LDX	COL
+	LDY	ROW
+	JSR	GOTOXY
 	RTS
 
 
@@ -205,7 +213,7 @@ PUTCH	SUBROUTINE
 ; If this is too slow and we have RAM avail, then use a straight lookup table
 ; ( Ie TAX; LDA LOOKUP,X; RTS )
 SCRCONV	SUBROUTINE
-	CMP	#$40		; <$41 don't adjust
+	CMP	#$41		; <$41 don't adjust
 	BCC	.done
 	CMP	#$5A		; $41 to $5A are 'uppercase' letters
 	BCC	.upper
@@ -238,89 +246,13 @@ SCRCONVTBL
 	DC.B    $00,$41,$42,$43,$44,$45,$46,$47,$48,$49,$4a,$4b,$4c,$4d,$4e,$4f	; Uppercase ascii -> screen code
         DC.B    $50,$51,$52,$53,$54,$55,$56,$57,$58,$59,$5a,$1b,$1c,$1d,$1e,$64
         DC.B    $7D,$01,$02,$03,$04,$05,$06,$07,$08,$09,$0a,$0b,$0c,$0d,$0e,$0f ; Backtick becomes _| box drawing char
-        DC.B    $10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$1a,$AC,$5D,$AE,$71,$66	; Fixed pipe, tidla becomes inverse T shaped box drawing
+        DC.B    $10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$1a,$73,$5D,$6B,$71,$66	; Fixed pipe, tidla becomes inverse T shaped box drawing
 										; DEL becomes half shaded box
+										; { becomes -|  and  } becomes |- box drawing
 
 
-;-----------------------------------------------------------------------
-; Add sign-extended A to CURLOC	
-; A - signed 8-bit displacement
-; If CURLOC+A exceeds screen then don't change
-ADDCURLOC	SUBROUTINE
-	TAX
-	CLC
-	ADC	CURLOC
-	STA	CURLOC
-	TXA
-	ORA	#$7F		; Sign extend A
-	BMI	.minus
-	LDA	#0
-.minus				; Sign extended A now in A
-	ADC	CURLOC+1	; Add to upper byte
-	STA	CURLOC+1
-	
-	; Check if we fit
-	RTS
-	TXA			; Restore A
-	EOR	#$FF		; Invert
-	SEC			; Add 1
-	ADC	#0		; (Negate A)
-	JSR	CHKBOUNDS
-	BCS	ADDCURLOC	; If out of bounds, invert add
-	RTS
-	
-;-----------------------------------------------------------------------
-; Check CURLOC is within the screen. 
-; Carry set on fail, clear on pass
-CHKBOUNDS	SUBROUTINE
-	LDA	CURLOC+1
-	CMP	#$80		; Start of screen is $8000
-	BCC	.fail
-	CMP	#>SCREND	; Past end of screen
-	BEQ	.testlow	; Test low byte if high is the end
-	BCS	.fail		
-.pass
-	CLC
-	RTS
-.testlow
-	LDA	CURLOC
-	CMP	#(<SCREND)+1
-	BCC	.pass		
-.fail
-	SEC
-	RTS
 
-;-----------------------------------------------------------------------
-; Cursor movement
-; Moves cursor one position for each direction.
-CURSUP	SUBROUTINE
-	LDA	ROW
-	BEQ	CURNONE
-	DEC	ROW
-	LDA	#-(SCRCOL)	; Subtract one row
-	JMP	ADDCURLOC
-CURSDN
-	LDA	ROW
-	CMP	#ROWMAX-1
-	BEQ	CURNONE
-	INC	ROW
-	LDA	#(SCRCOL)	; Add one row
-	JMP	ADDCURLOC
-CURSL
-	LDA	COL
-	BEQ	CURNONE
-	DEC	COL
-	LDA	#-1
-	JMP	ADDCURLOC
-CURSR
-	LDA	COL
-	CMP	#COLMAX-1
-	BEQ	CURNONE
-	INC	COL
-	LDA	#1
-	JMP	ADDCURLOC
-CURNONE
-	RTS
+
 
 ;-----------------------------------------------------------------------
 ; Set cursor position on the screen

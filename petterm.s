@@ -187,6 +187,11 @@ INIT	SUBROUTINE
 	STA	ROW
 	STA	COL
 	STA	KFAST
+	STA	DLYSCROLL
+	STA	ANSISTKI
+	STA	ANSIIN
+	STA	ANSIINOS
+	STA	ATTR
 
 	; Set-up screen
 	STA	CURLOC
@@ -236,7 +241,13 @@ START	SUBROUTINE
 	
 	JSR	CASEINIT	; Setup for Mixed or UPPER case 
 	
-
+	; Reset ANSI parser
+	LDA	#0
+	STA	ANSISTKI
+	STA	ANSIIN
+	STA	ANSIINOS
+	STA	DLYSCROLL
+	
 	
 	JSR	CLRSCR
 	LDX	#0
@@ -260,7 +271,7 @@ START	SUBROUTINE
 	TAX			; Save
 	INC	RXBUFR		; Acknowledge byte by incrementing 
 	TXA
-	JSR	PARSECH
+	JSR	ANSICH
 
 	; Set cursor at new position
 	LDY	#0
@@ -284,13 +295,13 @@ START	SUBROUTINE
 ; LOCAL ECHOBACK CODE
 	LDA	KBDBYTE
 	PHA
-	JSR	PARSECH		; Local-echoback for now
+	JSR	ANSICH		; Local-echoback for now
 	PLA
 	PHA
 	CMP	#$0D		; \r
 	BNE	.noechonl
 	LDA	#$0A;
-	JSR	PARSECH
+	JSR	ANSICH
 .noechonl
 	PLA
 ; LOCAL ECHOBACK CODE

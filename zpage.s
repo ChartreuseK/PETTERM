@@ -27,6 +27,8 @@ TMP2	DS.B	1
 
 TMPA	DS.W	1
 TMPA2	DS.W	1
+CNT	DS.B	1	
+
 
 POLLRES	DS.B	1		; KBD Polling interval for baud
 POLLTGT	DS.B	1		; Polling interval counter
@@ -50,6 +52,7 @@ MODE1	DS.B	1		; 76543210
 				; ||+------ 1 = Inverse case 0 = normal
 				; |+------- 1 = Mixed case  0 = UPPER CASE
 				; +-------- 1 = local echo
+ATTR	DS.B	1		; 0 = normal, non-zero = reverse video
 				
 SC_UPPERMOD	DS.B	1	; Modifier for uppercase letters, added to ch
 	; -$40 for UPPERONLY, +$20 for MIXED?
@@ -59,9 +62,17 @@ SC_LOWERMOD	DS.B	1	; Modifier for lowercase letters, added to ch
 KEYOFF	DS.B	1		; Keyboard matrix offset for shift
 KBDTMP	DS.B 	1		; Keyboard scanning temp, to allow BIT instruction
 
-PARSTKL	EQU	4		; Allow up to 4 arguments for ANSI parsing
-PARSTK	DS.B	PARSTKL		
+ANSISTKL	EQU	16	; Allow up to 16 arguments (any more will just be dropped)
+ANSISTK	DS.B	ANSISTKL	; The commands we support mainly take 1 or 2, though SGR 
+				; could have a long chain of attributes
+ANSISTKI DS.B	1
+ANSIIN	DS.B	1		; Are we inside an escape sequence
+ANSIINOS DS.B	1		; Are we inside an os string (to ignore)
 
+DLYSCROLL DS.B	1		; If non-zero, scrolling has been delayed and needs to happen on next character
+				; (Used so that the cursor can sit on the last column of screen)
+
+LASTCH	DS.B	1		; Last printable character drawn to screen
 
 RXBUFW	DS.B	1		; Write pointer
 RXBUFR	DS.B	1		; Read pointer
