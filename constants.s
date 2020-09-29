@@ -72,7 +72,7 @@ MODE1_ECHO	EQU	$80
 MODE1_CASE	EQU	$40
 MODE1_INV	EQU	$20
 
-BAUD_MAX	EQU	6		; 9600 max
+BAUD_MAX	EQU	4		; 2400 max (Any higher and the code gets bogged in the interrupts)
 
 SCUM_UPPER	EQU	-$40
 SCUM_MIXED	EQU	-$00

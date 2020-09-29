@@ -1,6 +1,6 @@
 ;-----------------------------------------------------------------------
 ; PETTerm
-; Version 0.4.0
+; Version 0.5.0
 ;
 ; A bit-banged full duplex serial terminal for the PET 2001 computers,
 ; including those running BASIC 1.
@@ -33,7 +33,7 @@
 ; to handle each character as well as recieve it. Though with flow control
 ; we might be able to push a little bit.
 ;
-; Hayden Kroepfl 2017-2020
+; Hayden Kroepfl (Chartreuse) 2017-2020
 ;
 ; Changelog
 ; 0.2.0	
@@ -74,6 +74,31 @@
 ;     as close to correct as possible. 
 ;      (~ is rendered as an inverted T block drawing character)
 ;
+; 0.5.0
+;   - Re-written, vastly more complete ANSI escape code handler
+;   - NOW REQUIRES a PET with at least 8kB of RAM (For 4k PETs stick with the 0.4 series 0.3.1)
+;     This was a consequence of the new escape code parser being much larger
+;   - Improved keyboard and serial handling allowing for 2400 baud.
+;   - Optimizations for screen/ansi handling
+;   - More improved character rendering (backtick and curly braces)
+;   - Added extra shift codes to keyboard
+;      Shift-@ = ~    Shift-' = `   Shift-[ = {    Shift-] = }
+;      Shift-^ (up arrow) = |
+;   
+;   If connecting to a *nix shell, set the following environment variables:
+;     TERM=ansi
+;     COLUMNS=40
+;     LINES=25
+;     LANG=C
+;   These should work well for most programs, PETTERM should support every escape sequence
+;   used by the ansi TERMCAP/TERMINFO
+;   Tested with: ls, vim, nano, elinks (web-browsing on the PET!), 
+;     top (not recommended even at 2400 as it buffers quite a bit of text between keypress checks)
+;     minicom (for nesting your serial terminals of course)
+;     alpine (a bit cramped at 40 columns)
+;     nethack (seems to work just fine)
+;     
+;   
 ; Written for the DASM assembler
 ;----------------------------------------------------------------------- 
 	PROCESSOR 6502
@@ -472,28 +497,20 @@ IRQHDLR	SUBROUTINE ; 36 cycles till we hit here from IRQ firing
 	LDA	VIA_TIM1L
 	; Transmit next bit if sending
 	JSR	SERTX		; Use old routine for now
-	;LDA	KFAST
-	;BNE	.fastkbd
-	JMP	.fastkbd
-	; Do keyboard polling after
+
+
+	LDA	KFAST		; Which keyboard scan routine
+	BNE	.fastkbd
+
+	;"Slow" keyboard polling (all rows at once)
 	DEC	POLLTGT		; Check if we're due to poll
 	BNE	.exit
-	
-	; Reset keyboard poll count
-	LDA	POLLRES
+	LDA	POLLRES		; Reset keyboard poll count
 	STA	POLLTGT
-	JSR	KBDPOLL		; Do keyboard polling
-	
-	; Check if we have a new keypress
-	CMP	KBDBYTE		; Check if the same byte as before
-	STA	KBDBYTE
-	BEQ	.exit		; Don't repeat
-	LDA	KBDBYTE
-	BEQ	.exit		; Don't signal blank keys
-	LDA	#$FF
-	STA	KBDNEW		; Signal a pressed key
-	BNE	.exit	
 
+	JSR	KBDPOLL		; Do keyboard polling
+	JMP	.keyend
+	
 .fastkbd
 	LDA	POLLTGT
 	BEQ	.final		; 0 
@@ -511,7 +528,7 @@ IRQHDLR	SUBROUTINE ; 36 cycles till we hit here from IRQ firing
 	LDA	POLLRES
 	STA	POLLTGT		; Reset polling counter
 	JSR	KBDROWCONV
-
+.keyend
 	CMP	KBDBYTE		; Check if same byte as before
 	STA	KBDBYTE
 	BEQ	.exit		; Don't signal the key for a repeat

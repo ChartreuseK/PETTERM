@@ -39,8 +39,10 @@ SERINIT	SUBROUTINE
 	STA	RXBUFR
 	STA	KFAST
 
+	; Below 1200 baud there's not enough serial events between
+	; keyboard polls to use the split routines
 	CPX	#3		; Use fast keyboard scanning above 600
-	BCS	.slow
+	BCC	.slow
 	LDA	#$FF		; Fast/split keyboard scanning
 	STA	KFAST		
 .slow
