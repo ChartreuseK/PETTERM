@@ -583,7 +583,7 @@ A_DELLINE	SUBROUTINE
 	LDY	ROW		; Start at current and go to end
 .loop1
 	INY
-	TAY
+	TYA
 	PHA			; Save on stack
 
 	LDX	#0
