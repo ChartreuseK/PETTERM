@@ -3,7 +3,8 @@
 ; Version 0.5.0
 ;
 ; A bit-banged full duplex serial terminal for the PET 2001 computers,
-; including those running BASIC 1.
+; including those running BASIC 1. 
+;  Currently requires 8kB or more RAM (~4.5kB at the moment)
 ;
 ; Targets 8N1 serial. Baud rate will be whatever we can set the timer for
 ; and be able to handle interrupts fast enough.
@@ -23,6 +24,7 @@
 ;	600  - $0683  (1666.66...)  -0.04% error
 ;	1200 - $0341  (833.33...)   -0.04% error
 ;	2400 - $01A1  (416.66...)    0.08% error
+;     -----Unworkable below due to hardware speed------
 ;	4800 - $00D0  (208.33...)   -0.16% error
 ;	9600 - $0068  (104.16...)   -0.16% error
 ;
@@ -84,7 +86,6 @@
 ;   - Added extra shift codes to keyboard
 ;      Shift-@ = ~    Shift-' = `   Shift-[ = {    Shift-] = }
 ;      Shift-^ (up arrow) = |
-;   
 ;   If connecting to a *nix shell, set the following environment variables:
 ;     TERM=ansi
 ;     COLUMNS=40
@@ -393,33 +394,23 @@ START	SUBROUTINE
 	INCLUDE "menu.s"
 
 	
-	
-;	110  - $2383  (9090.90...)  0.001% error
-;	  Are you hooking this up to an ASR-33 or something?
-; 	300  - $0D05  (3333.33...)  -0.01% error
-;	600  - $0683  (1666.66...)  -0.04% error
-;	1200 - $0341  (833.33...)   -0.04% error
-;	2400 - $01A1  (416.66...)    0.08% error
-;	4800 - $00D0  (208.33...)   -0.16% error
-;	9600 - $0068  (104.16...)   -0.16% error
-
-	
-	
 
 ;-----------------------------------------------------------------------
 ; Static data
-
+;
 ; Baud rate timer values, 1x baud rate
 ;		 110  300  600 1200 2400 4800 9600
 BAUDTBLL 
 	DC.B	$83, $05, $83, $41, $A1, $D0, $68
 BAUDTBLH	
 	DC.B	$23, $0D, $06, $03, $01, $00, $00
+
 ; Poll interval mask for ~60Hz keyboard polling based on the baud timer
 	; 	110  300  600 1200 2400 4800  9600 (Baud)
 POLLINT 
 	DC.B	  2,   5,  10,  20,  40,  80, 160
 ;Poll freq Hz  	 55   60   60   60   60   60   60
+;If POLLINT value is below 12 we need to use the all at once keyboard scan
 
 ; 1.5x buad timer for after VIA_IFRstart bit
 B15TBLL
@@ -491,7 +482,7 @@ IRQHDLR	SUBROUTINE ; 36 cycles till we hit here from IRQ firing
 	STA	VIA_TIM2L	;4
 	LDA	TIM2BAUDH,X	;4
 	STA	VIA_TIM2H	;4<--From start of IRQ to here is 93 ($5D) cycles!, need to subtract from BAUDTBL
-	JMP	.exit
+	JMP	.exit		; to give us TIM2BAUD
 	;--------------------------------
 .tim1
 	LDA	VIA_TIM1L
