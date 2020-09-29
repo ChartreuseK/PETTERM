@@ -125,36 +125,36 @@ PRINTCH SUBROUTINE
 PRINTCH_TAB
 .tab	
 	; Increment COL to next multiple of 8
-	LDA	COL
-	AND	#$F8		
-	CLC
-	ADC	#8
-	STA	COL
-	CMP	#COLMAX
-	BCS	.tabw	
+	LDA	COL		
+	AND	#$F8		; Round down COL to previous multiple of 8
+	CLC			
+	ADC	#8		; Add 8 (next multiple of 8)
+	STA	COL		; Our new column
+	CMP	#COLMAX		; Did we go past the end of the screen?
+	BCS	.tabw		; If so then wrap
 	TAX
 	LDY	ROW
-	JMP	GOTOXY
+	JMP	GOTOXY		; Otherwise goto new position (tailcall)
 .tabw
-	LDA	#0
-	STA	COL
-	JMp	.nl
+	LDA	#0		; We wrapped so return to col 0
+	STA	COL		; 
+	BEQ	.nl		; Then go to next line
 	
 .cr
-	LDX	#0
+	LDX	#0		
 	STX	DLYSCROLL	; Set COL=0, and reset delayed scrolling
 	LDY	ROW
-	JMP	GOTOXY
+	JMP	GOTOXY		; Goto first column of current row
 .nl
 	INC	ROW
 	LDY	ROW
 	CPY	#ROWMAX
-	BNE	.nlrow
-	JSR	SCROLL
+	BNE	.nlrow		
+	JSR	SCROLL		; Scroll screen if we're at the bottom
 	LDY	#ROWMAX-1
 .nlrow
 	LDX	COL
-	JMP	GOTOXY
+	JMP	GOTOXY		; Goto same column on the new line
 	
 .normal
 	LDX	DLYSCROLL
@@ -163,10 +163,12 @@ PRINTCH_TAB
 	STX	DLYSCROLL	; Reset to 0
 	; A scroll was postponed, do it now
 .doscroll
-	JSR	SCROLL
+	PHA			; Save character
+	JSR	SCROLL		; Scroll screen up
 	LDX	#0
 	LDY	#ROWMAX-1
-	JSR	GOTOXY
+	JSR	GOTOXY		; Goto start of last row
+	PLA			; Restore character
 	; Fall into PUTCH
 ;-----------------------------------------------------------------------
 ; Write a character to the current position
