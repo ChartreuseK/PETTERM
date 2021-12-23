@@ -67,6 +67,8 @@ BAS4_VECT_BRK  EQU	$0092	; 92/93 - BRK vector
 BAS1_VECT_IRQ  EQU	$0219	; 219/220 - Interrupt vector
 BAS1_VECT_BRK  EQU	$0216	; 216/217 - BRK vector
 
+; Start of BASIC on PET/CBM computers
+SOB		EQU	$0401
 
 MODE1_ECHO	EQU	$80
 MODE1_CASE	EQU	$40

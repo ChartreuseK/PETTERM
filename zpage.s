@@ -78,6 +78,18 @@ RXBUFW	DS.B	1		; Write pointer
 RXBUFR	DS.B	1		; Read pointer
 KFAST	DS.B	1		; 0 if slow/normal scanning, 1 for fast split scanning
 
+LOADB	DS.B	1		; Load BASIC program flag
+SAVEB	DS.B	1		; Save BASIC program flag
+FNAMEW	DS.B	1		; File name write pointer
+FNAMER	DS.B	1		; File name read pointer
+FNAME	DS.B	1		; File name pointer
+BLENLO	DS.B	1		; BASIC len lo byte
+BLENHI	DS.B	1		; BASIC len hi byte
+ENDLO	DS.B	1		; BASIC end lo byte
+ENDHI	DS.B	1		; BASIC end hi byte
+PTRLO	DS.B	1		; BASIC ptr lo byte
+PTRHI	DS.B	1		; BASIC ptr hi byte
+
 ; Make sure not to use $90-95 these are Vectors for BASIC 2+
 	RORG	$90
 	DS.B	1		; Reserve so we get a compiler error if we

@@ -251,6 +251,12 @@ INIT	SUBROUTINE
 	STA	SC_UPPERMOD	
 	LDA	#SCLM_UPPER	; Default mode is uppercase only
 	STA	SC_LOWERMOD
+
+	; Clear BASIC I/O flags
+	LDA	#0
+	STA	LOADB
+	LDA	#0
+	STA	SAVEB
 	
 	JSR	SERINIT
 	
@@ -279,6 +285,8 @@ START	SUBROUTINE
 	LDX	#0
 	LDY	#0
 	JSR	GOTOXY
+
+	JSR	SAVELOAD	; Save or Load BASIC if requested
 
 .loop
 	LDX	RXBUFR
@@ -392,6 +400,10 @@ START	SUBROUTINE
 ;-- Options menu code --------------------------------------------------
 ;-----------------------------------------------------------------------
 	INCLUDE "menu.s"
+;-----------------------------------------------------------------------
+;-- BASIC load and save code -------------------------------------------
+;-----------------------------------------------------------------------
+        INCLUDE "basic.s"
 
 	
 

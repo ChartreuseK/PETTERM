@@ -112,6 +112,10 @@ DOMENU	SUBROUTINE
 	BEQ	.tglcase
 	CMP	#'5
 	BEQ	.tglinv
+	CMP	#'6
+	BEQ	.loadb
+	CMP	#'7
+	BEQ	.saveb
 	CMP	#$0D		; CR
 	BEQ	.done
 	BNE	.keywait
@@ -143,6 +147,13 @@ DOMENU	SUBROUTINE
 	; Fall into .doupdate
 .doupdate
 	JMP	.update
+.loadb
+	LDA	#1
+	STA	LOADB
+	JMP	.done
+.saveb	LDA	#1
+	STA	SAVEB
+	; Fall into .done
 .done
 	RTS
 	
@@ -156,6 +167,8 @@ S_MENU
 	DC.B	"[3] TOGGLE LOCAL ECHO",13,10,10
 	DC.B	"[4] TOGGLE UPPERCASE/MIXED CASE",13,10,10
 	DC.B	"[5] TOGGLE INVERSE CASE (FOR ORIG ROMS)",13,10,10
+	DC.B	"[6] LOAD BASIC PROGRAM",13,10,10
+	DC.B	"[7] SAVE BASIC PROGRAM",13,10,10
 	DC.B	"[RETURN] START TERMINAL",13,10,0
 	
 S_CUR
