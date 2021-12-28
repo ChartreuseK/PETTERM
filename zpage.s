@@ -80,6 +80,7 @@ KFAST	DS.B	1		; 0 if slow/normal scanning, 1 for fast split scanning
 
 LOADB	DS.B	1		; Load BASIC program flag
 SAVEB	DS.B	1		; Save BASIC program flag
+RXBCNT	DS.B	1		; RX buffer byte count
 FNAMEW	DS.B	1		; File name write pointer
 FNAMER	DS.B	1		; File name read pointer
 FNAME	DS.B	1		; File name pointer

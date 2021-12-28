@@ -12,20 +12,44 @@ SAVELOAD SUBROUTINE
 .bload
 	LDA	#0
 	STA	LOADB		; Clear BASIC load flag
+	STA	RXBCNT		; Reset RX buffer byte count
 
-        LDX     RXBUFR
-        CPX     RXBUFW
-        BEQ     .bload		; Loop till we get a character in
+	JSR .rxb		; Receive a byte
 
-        ; Handle new byte
-        LDA     RXBUF,X		; New character
-        TAX                     ; Save
-        INC     RXBUFR          ; Acknowledge byte by incrementing 
-        TXA
+	; Calculate byte count
+        LDX     #<SOB           ; lo byte of basic
+        STX     BASICLO
+        LDX     #>SOB           ; hi byte of basic
+        STX     BASICHI
+        SEC                     ; set carry flag
+
+        SBC     BASICLO         ; sub lo byte
+        STA     BLENLO          ; resulting lo byte len
+
+	JSR .rxb
+
+        SBC     BASICHI         ; carry flg complmnt
+        STA     BLENHI          ; resulting hi byte len
+
+		
 	; Check for end of program and END, else continue
         ; Save byte in A to BASIC PTR and loop
 
 	; End of BASIC LOAD code	
+	RTS
+
+.rxb	LDX     RXBUFR
+        CPX     RXBUFW
+        BEQ     .rxb         ; Loop till we get a character in
+
+        ; Handle new byte
+        LDA     RXBUF,X         ; New character
+        TAX                     ; Save
+        INC     RXBUFR          ; Acknowledge byte by incrementing
+        TXA
+
+	LDY	RXBCNT		; Increment RX byte counter
+	INY
 	RTS
 
 .bsave
@@ -165,10 +189,10 @@ BLEN SUBROUTINE
 	LDX	#>SOB  		; hi byte of basic
 	STX	BASICHI
 	SEC			; set carry flag
-	LDA 	$0401		; first lo byte
+	LDA 	SOB		; first lo byte
 	SBC	BASICLO		; sub other lo byte
 	STA	BLENLO 		; resulting lo byte
-	LDA	$0402		; first hi byte
+	LDA	SOB+1		; first hi byte
 	SBC	BASICHI		; carry flg complmnt
 	STA	BLENHI		; resulting hi byte
 	RTS
