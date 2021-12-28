@@ -83,12 +83,16 @@ SAVEB	DS.B	1		; Save BASIC program flag
 FNAMEW	DS.B	1		; File name write pointer
 FNAMER	DS.B	1		; File name read pointer
 FNAME	DS.B	1		; File name pointer
+BASICLO	DS.B	1		; SOB lo byte
+BASICHI	DS.B	1		; SOB hi byte
 BLENLO	DS.B	1		; BASIC len lo byte
 BLENHI	DS.B	1		; BASIC len hi byte
 ENDLO	DS.B	1		; BASIC end lo byte
 ENDHI	DS.B	1		; BASIC end hi byte
 PTRLO	DS.B	1		; BASIC ptr lo byte
 PTRHI	DS.B	1		; BASIC ptr hi byte
+EXITFLG	DS.B	1		; Exit flag
+
 
 ; Make sure not to use $90-95 these are Vectors for BASIC 2+
 	RORG	$90

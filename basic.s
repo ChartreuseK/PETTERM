@@ -34,6 +34,8 @@ SAVELOAD SUBROUTINE
 	STA	FNAMEW
 	STA	FNAMER
 	STA	FNAME
+	STA	BLENLO
+	STA	BLENHI
 
 	JSR	BLEN		; Calc BASIC len
 
@@ -83,7 +85,7 @@ SAVELOAD SUBROUTINE
         INC     FNAMER          ; Acknowledge byte by incrementing 
         TXA
 
-	JSR	SENDCH
+	;JSR	SENDCH
 	JMP	.fsend		; Filename loop
 
 .dsend				; Send data
@@ -158,17 +160,17 @@ SAVELOAD SUBROUTINE
 	RTS
 
 BLEN SUBROUTINE
-	LDX	#<SOB  ; lo byte of basic
-	STX	TMP1
-	LDX	#>SOB  ; hi byte of basic
-	STX	TMP2
-	SEC	       ; set carry flag
-	LDA 	SOB    ; first lo byte
-	SBC	TMP1   ; sub other lo byte
-	STA	BLENLO ; resulting lo byte
-	LDA	SOB+1  ; first hi byte
-	SBC	TMP2   ; carry flg complmnt
-	STA	BLENHI ; resulting hi byte
+	LDX	#<SOB  		; lo byte of basic
+	STX	BASICLO
+	LDX	#>SOB  		; hi byte of basic
+	STX	BASICHI
+	SEC			; set carry flag
+	LDA 	$0401		; first lo byte
+	SBC	BASICLO		; sub other lo byte
+	STA	BLENLO 		; resulting lo byte
+	LDA	$0402		; first hi byte
+	SBC	BASICHI		; carry flg complmnt
+	STA	BLENHI		; resulting hi byte
 	RTS
 
 S_PROMPT

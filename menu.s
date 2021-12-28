@@ -116,6 +116,8 @@ DOMENU	SUBROUTINE
 	BEQ	.loadb
 	CMP	#'7
 	BEQ	.saveb
+	CMP	#'8
+	BEQ	.bye
 	CMP	#$0D		; CR
 	BEQ	.done
 	BNE	.keywait
@@ -153,6 +155,11 @@ DOMENU	SUBROUTINE
 	JMP	.done
 .saveb	LDA	#1
 	STA	SAVEB
+	JMP	.done
+.bye
+	;JMP	($FFFC)		; BASIC reset vector. Bye bye!
+	LDA	#1
+	STA	EXITFLG
 	; Fall into .done
 .done
 	RTS

@@ -129,8 +129,9 @@
 ;-----------------------------------------------------------------------
 ; Start of loaded data
 	SEG	CODE
-	ORG	$0401           ; Start address for PET computers
-	
+	ORG	$1000           ; Start address for PET computers
+
+	JMP	INIT		; Skip BASIC loader -APW
 ;-----------------------------------------------------------------------
 ; Simple Basic 'Loader' - BASIC Statement to jump into our program
 BLDR
@@ -148,7 +149,6 @@ BLDR
 BLDR_ENDL
 	DC.W $0		; LINK (End of program)
 ;-----------------------------------------------------------------------
-
 
 ;-----------------------------------------------------------------------
 ; Initialization
@@ -218,6 +218,7 @@ INIT	SUBROUTINE
 	STA	ANSIIN
 	STA	ANSIINOS
 	STA	ATTR
+	STA	EXITFLG
 
 	; Set-up screen
 	STA	CURLOC
@@ -265,7 +266,7 @@ INIT	SUBROUTINE
 ; Start of program (after INIT called)
 START	SUBROUTINE
 	CLI	; Enable interrupts
-	
+
 .remenu
 	JSR	DOMENU
 	
@@ -280,8 +281,7 @@ START	SUBROUTINE
 	STA	ANSIINOS
 	STA	DLYSCROLL
 	
-	
-	JSR	CLRSCR
+.go	JSR	CLRSCR
 	LDX	#0
 	LDY	#0
 	JSR	GOTOXY
@@ -349,6 +349,10 @@ START	SUBROUTINE
 	STA	TXBYTE
 	LDA	#$FF
 	STA	TXNEW		; Signal to transmit
+
+	LDA 	#1
+	CMP	EXITFLG
+	BEQ	.done
 .nokey
 	JMP	.loop
 
@@ -378,7 +382,9 @@ START	SUBROUTINE
 	JSR	SENDCH
 
 	JMP	.loop
-
+.done	LDA	#0
+	STA	EXITFLG
+	RTS
 
 ;-----------------------------------------------------------------------
 ;-- Bit-banged serial code ---------------------------------------------
@@ -572,9 +578,6 @@ IRQHDLR	SUBROUTINE ; 36 cycles till we hit here from IRQ firing
 	RTI			; Return from interrupt
 
 
-	
-
-
 ;-----------------------------------------------------------------------
 ; Initialize VIA and userport
 INITVIA SUBROUTINE
@@ -592,10 +595,6 @@ INITVIA SUBROUTINE
 	LDA	#$C2		; Enable Timer 1 interrupt and CA1 interrupt
 	STA	VIA_IER
 	RTS
-	
-	
-
-
 
 ;----------------------------------------------------------------------------
 	ECHO "Program size in HEX: ", .-$401
