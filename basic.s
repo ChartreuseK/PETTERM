@@ -12,30 +12,57 @@ SAVELOAD SUBROUTINE
 .bload
 	LDA	#0
 	STA	LOADB		; Clear BASIC load flag
-	STA	RXBCNT		; Reset RX buffer byte count
+	STX	TMP1		; Clear TMP1 byte count
 
-	JSR .rxb		; Receive a byte
+        LDX     #<SOB
+        STX     PTRLO
+        LDY     #>SOB
+        STY     PTRHI
+	STY	ENDHI		; Init value
 
-	; Calculate byte count
-        LDX     #<SOB           ; lo byte of basic
-        STX     BASICLO
-        LDX     #>SOB           ; hi byte of basic
-        STX     BASICHI
-        SEC                     ; set carry flag
+.lloop				; Load loop
+	JSR	.rxb		; Receive a byte
 
-        SBC     BASICLO         ; sub lo byte
-        STA     BLENLO          ; resulting lo byte len
+; check for the first 2 bytes
+	LDX	TMP1
+	CPX	#0
+	BNE	.wri1
+	STA	ENDLO		; Store end byte lo
+.wri1	CPX	#1
+	BNE	.wri2
+	STA	ENDHI		; Store end byte hi
+.wri2
+	LDX	TMP1
+	INX
+	STX	TMP1		; Inc TMP1
+        LDY     #0
+        STA     (PTRLO),Y	; Store to BASIC mem
 
-	JSR .rxb
+	JSR	HEXOUT		; DEBUG PRINT
 
-        SBC     BASICHI         ; carry flg complmnt
-        STA     BLENHI          ; resulting hi byte len
+; increment BASIC ptr
+	INC	PTRLO
+	BNE	.inc16ena
+	INC	PTRLO
+.inc16ena
 
-		
-	; Check for end of program and END, else continue
-        ; Save byte in A to BASIC PTR and loop
+	LDX	PTRHI
+	CPX	ENDHI		; cmp step ptr to end hi
+	BNE	.lloop		; keep reading
+	LDX	PTRLO
+	CPX	ENDLO		; cmp step ptr to end lo
+	BNE	.lloop		; keep reading
+
+; end of BASIC LOAD code
+
+        LDA     #<L_DONE
+        LDY     #>L_DONE
+        JSR     PRINTSTR
 
 	; End of BASIC LOAD code	
+
+	;JMP	SOB
+
 	RTS
 
 .rxb	LDX     RXBUFR
@@ -48,8 +75,6 @@ SAVELOAD SUBROUTINE
         INC     RXBUFR          ; Acknowledge byte by incrementing
         TXA
 
-	LDY	RXBCNT		; Increment RX byte counter
-	INY
 	RTS
 
 .bsave
@@ -165,9 +190,9 @@ SAVELOAD SUBROUTINE
 
 ; increment BASIC ptr
 	INC	PTRLO
-	BNE	.inc16end
+	BNE	.inc16enb
 	INC	PTRLO
-.inc16end
+.inc16enb
 
 	LDX	PTRHI
 	CPX	ENDHI		; cmp step ptr to end hi
@@ -197,8 +222,31 @@ BLEN SUBROUTINE
 	STA	BLENHI		; resulting hi byte
 	RTS
 
+HEXDIG SUBROUTINE
+	CMP	#$0a		; alpha digit?
+	BCC	.skip		; if no, then skip
+	ADC	#$06		; add seven
+.skip	ADC	#$30		; convert to ascii
+	JMP	$ffd2		; print it
+	; no rts, proceed to HEXOUT
+
+HEXOUT SUBROUTINE
+	PHA		; save the byte
+	LSR
+	LSR		; extract 4...
+	LSR		; ...high bits
+	LSR
+	JSR	HEXDIG
+	PLA		; bring byte back
+	AND	#$0f	; extract low four
+	JMP	HEXDIG	; print ascii
+
 S_PROMPT
 	DC.B    "ENTER PROGRAM NAME: ",0
 
 S_DONE
 	DC.B	"SAVING DONE!",0
+
+L_DONE
+	DC.B	"LOADING DONE!",0
+
