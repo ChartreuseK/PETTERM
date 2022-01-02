@@ -87,6 +87,7 @@ BASICLO	DS.B	1		; SOB lo byte
 BASICHI	DS.B	1		; SOB hi byte
 BLENLO	DS.B	1		; BASIC len lo byte
 BLENHI	DS.B	1		; BASIC len hi byte
+BTMP1	DS.B	1		; BASIC temp var
 ENDLO	DS.B	1		; BASIC end lo byte
 ENDHI	DS.B	1		; BASIC end hi byte
 PTRLO	DS.B	1		; BASIC ptr lo byte

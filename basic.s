@@ -6,13 +6,14 @@ SAVELOAD SUBROUTINE
 	BEQ	.bload
 	LDA	#1
 	CMP	SAVEB
-	BEQ	.bsave
+	BEQ	.bjmp
 	RTS
+.bjmp	JMP	.bsave
 
 .bload
 	LDA	#0
 	STA	LOADB		; Clear BASIC load flag
-	STX	TMP1		; Clear TMP1 byte count
+	STA	BTMP1		; Clear BTMP1 byte count
 
         LDX     #<SOB
         STX     PTRLO
@@ -21,30 +22,70 @@ SAVELOAD SUBROUTINE
 	STY	ENDHI		; Init value
 
 .lloop				; Load loop
-	JSR	.rxb		; Receive a byte
+
+        LDX     RXBUFR
+        CPX     RXBUFW
+        BEQ     .lnorx          ; Loop till we get a character in
+
+        ; Remove cursor from old position before handling
+        LDY     #0
+        LDA     (CURLOC),Y
+        ;AND    #$7F
+        EOR     #$80
+        STA     (CURLOC),Y
+
+        ; Handle new byte
+        LDA     RXBUF,X         ; New character
+        TAX                     ; Save
+        INC     RXBUFR          ; Acknowledge byte by incrementing 
+        TXA
+
+	TAX			; Debug print
+	JSR	HEXOUT
+	TXA
 
 ; check for the first 2 bytes
-	LDX	TMP1
+	LDX	BTMP1
 	CPX	#0
 	BNE	.wri1
 	STA	ENDLO		; Store end byte lo
-.wri1	CPX	#1
+	TAX
+	JSR	HEXOUT
+	TXA
+.wri1	LDX	BTMP1
+	CPX	#1
 	BNE	.wri2
 	STA	ENDHI		; Store end byte hi
+	TAX
+	JSR	HEXOUT
+	TXA
 .wri2
-	LDX	TMP1
-	INX
-	STX	TMP1		; Inc TMP1
         LDY     #0
         STA     (PTRLO),Y	; Store to BASIC mem
 
-	JSR	HEXOUT		; DEBUG PRINT
+        LDX     BTMP1
+        INX
+        STX     BTMP1            ; Inc BTMP1
 
 ; increment BASIC ptr
 	INC	PTRLO
 	BNE	.inc16ena
 	INC	PTRLO
 .inc16ena
+
+        ; Set cursor at new position
+        LDY     #0
+        LDA     (CURLOC),Y
+        ;ORA    #$80
+        EOR     #$80
+        STA     (CURLOC),Y
+
+	TAX
+	LDA	PTRHI
+	JSR 	HEXOUT
+	LDA	PTRLO
+	JSR	HEXOUT
+	TXA
 
 	LDX	PTRHI
 	CPX	ENDHI		; cmp step ptr to end hi
@@ -53,8 +94,24 @@ SAVELOAD SUBROUTINE
 	CPX	ENDLO		; cmp step ptr to end lo
 	BNE	.lloop		; keep reading
 
-; end of BASIC LOAD code
+.lnorx
+	LDA	KBDNEW
+	BEQ	.lnokey
+        LDA     #$0
+        STA     KBDNEW
 
+        LDA     KBDBYTE
+        BMI     .ltrmkey        ; Key's above $80 are special keys for the terminal
+.ltrmkey
+        CMP     #$F0            ; $F0 - Menu key
+        BEQ     .lmenu
+        JMP     .lloop
+
+.lnokey
+	JMP	.lloop
+.lmenu	
+	RTS			; Return to main menu
+; end of BASIC LOAD code
         LDA     #<L_DONE
         LDY     #>L_DONE
         JSR     PRINTSTR
@@ -62,18 +119,6 @@ SAVELOAD SUBROUTINE
 	; End of BASIC LOAD code	
 
 	;JMP	SOB
-
-	RTS
-
-.rxb	LDX     RXBUFR
-        CPX     RXBUFW
-        BEQ     .rxb         ; Loop till we get a character in
-
-        ; Handle new byte
-        LDA     RXBUF,X         ; New character
-        TAX                     ; Save
-        INC     RXBUFR          ; Acknowledge byte by incrementing
-        TXA
 
 	RTS
 
@@ -140,13 +185,13 @@ SAVELOAD SUBROUTINE
 .dsend				; Send data
 
 	LDX	#0
-	STX	TMP1
+	STX	BTMP1
 	LDX	#<SOB
 	STX	PTRLO
 	LDY	#>SOB
 	STY	PTRHI
 .sloop				; Save loop
-	LDX	TMP1
+	LDX	BTMP1
 	LDY	#0
 	LDA	(PTRLO),Y
 	CPX	#0
@@ -179,13 +224,13 @@ SAVELOAD SUBROUTINE
 
 	LDA	ENDLO
 
-	LDX	TMP1
+	LDX	BTMP1
 .read1	CPX	#$01
 	BNE	.read2
 	STA	ENDHI		; store end hi byte
 .read2				; read BASIC program
 	INX
-	STX	TMP1
+	STX	BTMP1
 	JSR	SENDCH		; send BASIC bytes
 
 ; increment BASIC ptr
