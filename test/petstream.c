@@ -148,18 +148,29 @@ static unsigned char tx_pet(int fd)
    if (DEBUG) printf("\n   Reading pet_basic.seq for loading...\n\n");
    fin = fopen("pet_basic.seq", "rb");
 
-   char buffer[1];
+   char buffer[2];
+   char eot[8] = "\0\0\0\0\0\0\0\0";
    int rcount = 0;
+   unsigned int bcount = 0;
    if (fin) {
       /* File was opened successfully. */
 
       /* Attempt to read */
       if (DEBUG) printf("   ");
       while (rcount = fread(buffer, 1,1, fin) > 0) {
-         if (DEBUG) printf("0x%02x ", buffer[0]);
-	 write(fd, &buffer[0], 1);
-         usleep(100);
+	 if (bcount > 1) { // skip first two bytes
+             if (DEBUG) printf("0x%02x ", buffer[0]);
+             write(fd, &buffer[0], 1);
+             usleep(200);
+	 }
+	 bcount++;
       }
+      // kludge to flush with three null characters 
+      for (int i=0; i < 3; i++) {
+         write(fd, &eot[i], 1);
+	 usleep(200);
+      }
+      tcdrain(fd);
       if (DEBUG) printf("\n\n");
       fclose(fin);
    }
@@ -202,10 +213,10 @@ int set_interface_attribs(int fd, int speed, int canonical)
    //tty.c_iflag &= ~(INLCR | ICRNL | IUCLC | IMAXBEL);
    tty.c_iflag &= ~(IXON | IXOFF | IXANY);   /* no SW flowcontrol */
 
-   tty.c_oflag |= ONLCR; /* translate newline to NL-CR pair */
+   //tty.c_oflag |= ONLCR; /* translate newline to NL-CR pair */
    //tty.c_oflag |= NLDLY / NL1;
    tty.c_oflag |= CRDLY / CR3; /* carriage-return delay */
-   //tty.c_oflag &= ~OPOST;
+   tty.c_oflag &= ~OPOST;
 
    tty.c_cc[VEOL] = 0;
    tty.c_cc[VEOL2] = 0;
@@ -276,6 +287,8 @@ int main(int argc, char **argv)
           fprintf(stderr, "ERROR: unknown method %s\n", argv[1]);
 	  exit(1);
       }
+
+      close(fd);
       exit(0); // POC : Bail for now...
 
       plen = read(fd, &p, 1);

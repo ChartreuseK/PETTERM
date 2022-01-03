@@ -384,7 +384,7 @@ START	SUBROUTINE
 	JMP	.loop
 .done	LDA	#0
 	STA	EXITFLG
-	RTS
+	JMP	SOB-1
 
 ;-----------------------------------------------------------------------
 ;-- Bit-banged serial code ---------------------------------------------

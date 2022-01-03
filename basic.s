@@ -118,8 +118,6 @@ SAVELOAD SUBROUTINE
 
 	; End of BASIC LOAD code	
 
-	;JMP	SOB
-
 	RTS
 
 .bsave
@@ -268,7 +266,7 @@ BLEN SUBROUTINE
 	RTS
 
 HEXDIG SUBROUTINE
-	CMP	#$0a		; alpha digit?
+	CMP	#$0A		; alpha digit?
 	BCC	.skip		; if no, then skip
 	ADC	#$06		; add seven
 .skip	ADC	#$30		; convert to ascii
