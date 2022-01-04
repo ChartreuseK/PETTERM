@@ -158,8 +158,8 @@ INIT	SUBROUTINE
 	; Clear ZP?
 	
 	; We never plan to return to BASIC, steal everything!
-	LDX	#$FF		; Set start of stack
-	TXS			; Set stack pointer to top of stack
+	;LDX	#$FF		; Set start of stack
+	;TXS			; Set stack pointer to top of stack
 	
 	; Determine which version of BASIC we have for a KERNAL
 	; TODO: What's a reliable way? Maybe probe for a byte that's
@@ -169,21 +169,41 @@ INIT	SUBROUTINE
 	; Initial baud rate	
 	LDA	#$03		; 1200 baud
 	STA	BAUD
-	
-	; Disable all PIA interrupt sources
-	LDA	PIA1_CRB
-	AND	#$FE		; Disable interrupts (60hz retrace int?)
-	STA	PIA1_CRB	
-	LDA	PIA1_CRA
-	AND	#$FE
-	STA	PIA1_CRA	; Disable interrupts
-	
-	LDA	PIA2_CRB
-	AND	#$FE		; Disable interrupts (60hz retrace int?)
-	STA	PIA2_CRB	
-	LDA	PIA2_CRA
-	AND	#$FE
-	STA	PIA2_CRA	; Disable interrupts
+
+        ; Disable all PIA interrupt sources
+        LDA     PIA1_CRB
+        STA     PIA1B           ; Save PIA1_CRB init value
+        AND     #$FE            ; Disable interrupts (60hz retrace int?)
+        STA     PIA1_CRB        
+        LDA     PIA1_CRA
+        STA     PIA1A           ; Save PIA1_CRA init value
+        AND     #$FE
+        STA     PIA1_CRA        ; Disable interrupts
+        
+        LDA     PIA2_CRB
+        STA     PIA2B           ; Save PIA2_CRB init value
+        AND     #$FE            ; Disable interrupts (60hz retrace int?)
+        STA     PIA2_CRB        
+        LDA     PIA2_CRA
+        STA     PIA2A           ; Save PIA1_CRAB init value
+        AND     #$FE
+        STA     PIA2_CRA        ; Disable interrupts
+
+        ; Save IRQ init value
+        LDA     BAS1_VECT_IRQ
+        STA     IRQB1LO         ; Save IRQ lo byte for BASIC 1
+        LDA     BAS1_VECT_IRQ+1
+        STA     IRQB1HI         ; Save IRQ hi byte for BASIC 1
+        LDA     BAS4_VECT_IRQ
+        STA     IRQB4LO         ; Save IRQ lo byte for BASIC 2/4
+        LDA     BAS4_VECT_IRQ+1
+        STA     IRQB4HI         ; Save IRQ hi byte for BASIC 2/4
+
+        ; Save PIA1 PA/PB init values
+        LDA     PIA1_PA
+        STA     PIA1PA
+        LDA     PIA1_PB
+        STA     PIA1PB
 	
 	; Install IRQ
 	LDA	#<IRQHDLR
@@ -384,7 +404,9 @@ START	SUBROUTINE
 	JMP	.loop
 .done	LDA	#0
 	STA	EXITFLG
-	JMP	SOB-1
+	JSR	RESETPIA
+	JSR	RESETVIA
+	RTS
 
 ;-----------------------------------------------------------------------
 ;-- Bit-banged serial code ---------------------------------------------
@@ -596,6 +618,53 @@ INITVIA SUBROUTINE
 	STA	VIA_IER
 	RTS
 
+;-----------------------------------------------------------------------
+; Reset VIA and userport
+; http://www.zimmers.net/cbmpics/cbm/PETx/petmem.txt
+RESETVIA SUBROUTINE
+        LDA     #$00
+        STA     VIA_DDRA
+        STA     VIA_ACR
+        STA     VIA_IFR
+        LDA     #$FF
+        STA     VIA_TIM1H
+        LDA     #$0C
+        STA     VIA_PCR
+        LDA     #$80
+        STA     VIA_IER
+        RTS
+
 ;----------------------------------------------------------------------------
+; Initialize PIA
+RESETPIA SUBROUTINE
+        ; Restore IRQ init values
+        LDA     IRQB1LO
+        STA     BAS1_VECT_IRQ
+        LDA     IRQB1HI
+        STA     BAS1_VECT_IRQ+1
+        LDA     IRQB4LO
+        STA     BAS4_VECT_IRQ
+        LDA     IRQB4HI
+        STA     BAS4_VECT_IRQ+1
+
+        LDA     PIA1A           ; PIA1_CRA init value
+        STA     PIA1_CRA
+        LDA     PIA1B           ; PIA1_CRB init value
+        STA     PIA1_CRB
+        LDA     PIA2A           ; PIA2_CRA init value
+        STA     PIA2_CRA
+        LDA     PIA2B           ; PIA2_CRB init value
+        STA     PIA2_CRB
+
+        ; Restore PIA1 PA/PB init values
+        LDA     PIA1PA
+        STA     PIA1_PA
+        LDA     PIA1PB
+        STA     PIA1_PB
+
+        RTS
+
+;----------------------------------------------------------------------------
+
 	ECHO "Program size in HEX: ", .-$401
 	ECHO "Size from start of ram HEX: ", .
