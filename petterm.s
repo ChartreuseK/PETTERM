@@ -626,8 +626,23 @@ RESETVIA SUBROUTINE
         STA     VIA_DDRA
         STA     VIA_ACR
         STA     VIA_IFR
+	STA	VIA_SR
+	LDA	#$1E
+	STA	VIA_TIM1L
+	LDA	#$41
+	STA	VIA_TIM1LL
         LDA     #$FF
+	STA	VIA_PORTB
+	STA	VIA_PORTAH
+	STA	VIA_PORTA
         STA     VIA_TIM1H
+	STA	VIA_TIM1HL
+	LDA	#$1B
+	STA	VIA_TIM2L
+	LDA	#$D5
+	STA	VIA_TIM2H
+	LDA	#$1E
+	STA	VIA_DDRB
         LDA     #$0C
         STA     VIA_PCR
         LDA     #$80
