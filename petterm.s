@@ -156,7 +156,11 @@ INIT	SUBROUTINE
 	SEI			; Disable interrupts
 	
 	; Clear ZP?
-	
+
+	; We do plan to return to BASIC. Save the stack pointer.
+	TSX
+	STX	SP
+
 	; We never plan to return to BASIC, steal everything!
 	;LDX	#$FF		; Set start of stack
 	;TXS			; Set stack pointer to top of stack
@@ -191,9 +195,9 @@ INIT	SUBROUTINE
 
         ; Save IRQ init value
         LDA     BAS1_VECT_IRQ
-        STA     IRQB1LO         ; Save IRQ lo byte for BASIC 1
+        ;STA     IRQB1LO         ; Save IRQ lo byte for BASIC 1
         LDA     BAS1_VECT_IRQ+1
-        STA     IRQB1HI         ; Save IRQ hi byte for BASIC 1
+        ;STA     IRQB1HI         ; Save IRQ hi byte for BASIC 1
         LDA     BAS4_VECT_IRQ
         STA     IRQB4LO         ; Save IRQ lo byte for BASIC 2/4
         LDA     BAS4_VECT_IRQ+1
@@ -307,7 +311,6 @@ START	SUBROUTINE
 	JSR	GOTOXY
 
 	JSR	SAVELOAD	; Save or Load BASIC if requested
-
 .loop
 	LDX	RXBUFR
 	CPX	RXBUFW
@@ -404,8 +407,13 @@ START	SUBROUTINE
 	JMP	.loop
 .done	LDA	#0
 	STA	EXITFLG
+
 	JSR	RESETPIA
 	JSR	RESETVIA
+
+        LDX	SP		; Retrieve initial start of stack
+        TXS			; Set stack pointer to top of stack
+
 	RTS
 
 ;-----------------------------------------------------------------------
@@ -628,7 +636,7 @@ RESETVIA SUBROUTINE
         STA     VIA_IFR
 	STA	VIA_SR
 	LDA	#$1E
-	STA	VIA_TIM1L
+	STA	VIA_TIM1L	
 	LDA	#$41
 	STA	VIA_TIM1LL
         LDA     #$FF
@@ -654,9 +662,9 @@ RESETVIA SUBROUTINE
 RESETPIA SUBROUTINE
         ; Restore IRQ init values
         LDA     IRQB1LO
-        STA     BAS1_VECT_IRQ
+        ;STA     BAS1_VECT_IRQ
         LDA     IRQB1HI
-        STA     BAS1_VECT_IRQ+1
+        ;STA     BAS1_VECT_IRQ+1
         LDA     IRQB4LO
         STA     BAS4_VECT_IRQ
         LDA     IRQB4HI
@@ -672,10 +680,10 @@ RESETPIA SUBROUTINE
         STA     PIA2_CRB
 
         ; Restore PIA1 PA/PB init values
-        LDA     PIA1PA
-        STA     PIA1_PA
-        LDA     PIA1PB
-        STA     PIA1_PB
+        ;LDA     PIA1PA
+        ;STA     PIA1_PA
+        ;LDA     PIA1PB
+        ;STA     PIA1_PB
 
         RTS
 
