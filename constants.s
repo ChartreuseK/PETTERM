@@ -47,7 +47,8 @@ PIA1_CRB   EQU  $E813
 RXBUF	   EQU $0300		; Ring buffer of recieved chars
 
 
-
+PIA2_PA	   EQU	$E820
+PIA2_PB    EQU	$E822
 PIA2_CRA   EQU  $E821
 PIA2_CRB   EQU  $E823
 

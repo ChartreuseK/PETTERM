@@ -660,7 +660,55 @@ RESETVIA SUBROUTINE
 ;----------------------------------------------------------------------------
 ; Initialize PIA
 RESETPIA SUBROUTINE
-        ; Restore IRQ init values
+
+        ;LDA     PIA1A           ; PIA1_CRA init value
+        ;STA     PIA1_CRA
+        ;LDA     PIA1B           ; PIA1_CRB init value
+        ;STA     PIA1_CRB
+        ;LDA     PIA2A           ; PIA2_CRA init value
+        ;STA     PIA2_CRA
+        ;LDA     PIA2B           ; PIA2_CRB init value
+        ;STA     PIA2_CRB
+
+        ; Restore PIA1 PA/PB init values
+        ;LDA     PIA1PA
+        ;STA     PIA1_PA
+        ;LDA     PIA1PB
+        ;STA     PIA1_PB
+
+	; Reset PIA1/2
+	LDA	#0
+	STA	PIA1_PA
+	STA	PIA1_PB
+	LDA	#$0F
+	STA	PIA1_PA		; This is currently DDRA, 4 inputs and 4 outputs
+	LDA	#$3D
+	STA	PIA1_CRB	; DDRB implictly left with #0, i.e. all inputs
+				; Control reg B enables CB1 interrupt with active
+				; low, and sets CB2 high
+	BIT	PIA1_PB		; Seems to be intended to clear interrupt flags
+				; in PIA1_CRB
+	LDA	#$3C
+	STA	PIA1_CRA	; Switches to Port A from DDRA, disables
+				; interrupts, sets CA2 high
+	
+	LDA	#0
+	STA	PIA2_PA
+	STA	PIA2_PB	
+	LDX	#$FF
+	STX	PIA2_PB		; This is currently DDRB, so it's configured for
+				; output on all 8 bits
+	LDA	#$3C
+	STA	PIA2_CRA	; DDRA implicitly left with inputs. CA2 is set
+				; for output & high
+	STA	PIA2_CRB	; CB2 is set for output, and is set high
+	STA	PIA2_PB		; Put #$FF as output of port B, because IEEE
+				; 'low' is 1 and V.V.
+
+        ; Disable interrupts
+        SEI
+
+        ; Restore IRQ vector init values
         LDA     IRQB1LO
         ;STA     BAS1_VECT_IRQ
         LDA     IRQB1HI
@@ -670,20 +718,8 @@ RESETPIA SUBROUTINE
         LDA     IRQB4HI
         STA     BAS4_VECT_IRQ+1
 
-        LDA     PIA1A           ; PIA1_CRA init value
-        STA     PIA1_CRA
-        LDA     PIA1B           ; PIA1_CRB init value
-        STA     PIA1_CRB
-        LDA     PIA2A           ; PIA2_CRA init value
-        STA     PIA2_CRA
-        LDA     PIA2B           ; PIA2_CRB init value
-        STA     PIA2_CRB
-
-        ; Restore PIA1 PA/PB init values
-        ;LDA     PIA1PA
-        ;STA     PIA1_PA
-        ;LDA     PIA1PB
-        ;STA     PIA1_PB
+        ; Enable interrupts
+        CLI
 
         RTS
 
