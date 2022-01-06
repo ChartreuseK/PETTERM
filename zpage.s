@@ -92,16 +92,10 @@ ENDLO	DS.B	1		; BASIC end lo byte
 ENDHI	DS.B	1		; BASIC end hi byte
 PTRLO	DS.B	1		; BASIC ptr lo byte
 PTRHI	DS.B	1		; BASIC ptr hi byte
-IRQB1LO DS.B    1               ; Hardware interrupt lo byte for BASIC 1
-IRQB1HI DS.B    1               ; Hardware interrupt hi byte for BASIC 1
+;IRQB1LO DS.B    1               ; Hardware interrupt lo byte for BASIC 1
+;IRQB1HI DS.B    1               ; Hardware interrupt hi byte for BASIC 1
 IRQB4LO DS.B    1               ; Hardware interrupt lo byte for BASIC 2/4
 IRQB4HI	DS.B	1		; Hardware interrupt hi byte for BASIC 2/4
-PIA1A	DS.B	1
-PIA1B	DS.B	1
-PIA2A	DS.B	1
-PIA2B	DS.B	1
-PIA1PA	DS.B	1
-PIA1PB	DS.B	1
 SP	DS.B	1
 EXITFLG	DS.B	1		; Exit flag
 

@@ -176,20 +176,20 @@ INIT	SUBROUTINE
 
         ; Disable all PIA interrupt sources
         LDA     PIA1_CRB
-        STA     PIA1B           ; Save PIA1_CRB init value
+        ;STA     PIA1B           ; Save PIA1_CRB init value
         AND     #$FE            ; Disable interrupts (60hz retrace int?)
         STA     PIA1_CRB        
         LDA     PIA1_CRA
-        STA     PIA1A           ; Save PIA1_CRA init value
+        ;STA     PIA1A           ; Save PIA1_CRA init value
         AND     #$FE
         STA     PIA1_CRA        ; Disable interrupts
         
         LDA     PIA2_CRB
-        STA     PIA2B           ; Save PIA2_CRB init value
+        ;STA     PIA2B           ; Save PIA2_CRB init value
         AND     #$FE            ; Disable interrupts (60hz retrace int?)
         STA     PIA2_CRB        
         LDA     PIA2_CRA
-        STA     PIA2A           ; Save PIA1_CRAB init value
+        ;STA     PIA2A           ; Save PIA1_CRAB init value
         AND     #$FE
         STA     PIA2_CRA        ; Disable interrupts
 
@@ -204,10 +204,10 @@ INIT	SUBROUTINE
         STA     IRQB4HI         ; Save IRQ hi byte for BASIC 2/4
 
         ; Save PIA1 PA/PB init values
-        LDA     PIA1_PA
-        STA     PIA1PA
-        LDA     PIA1_PB
-        STA     PIA1PB
+        ;LDA     PIA1_PA
+        ;STA     PIA1PA
+        ;LDA     PIA1_PB
+        ;STA     PIA1PB
 	
 	; Install IRQ
 	LDA	#<IRQHDLR
@@ -411,7 +411,6 @@ START	SUBROUTINE
 	JSR 	RESETIRQ
 
 	SEI
-	JSR	RESETPIA
 	JSR	RESETVIA
 	JSR	KRESETIO
 	CLI
@@ -638,9 +637,9 @@ RESETIRQ SUBROUTINE
         ; Disable interrupts
         SEI
         ; Restore IRQ vector init values
-        LDA     IRQB1LO
+        ;LDA     IRQB1LO
         ;STA     BAS1_VECT_IRQ
-        LDA     IRQB1HI
+        ;LDA     IRQB1HI
         ;STA     BAS1_VECT_IRQ+1
         LDA     IRQB4LO
         STA     BAS4_VECT_IRQ
@@ -649,33 +648,12 @@ RESETIRQ SUBROUTINE
         ; Enable interrupts
         CLI
 
-;----------------------------------------------------------------------------
-; Reset PIA
-RESETPIA SUBROUTINE
-
-        ; Restore PIA1/2 init values
-
-        ;LDA     PIA1A           ; PIA1_CRA init value
-        ;STA     PIA1_CRA
-        ;LDA     PIA1B           ; PIA1_CRB init value
-        ;STA     PIA1_CRB
-        ;LDA     PIA2A           ; PIA2_CRA init value
-        ;STA     PIA2_CRA
-        ;LDA     PIA2B           ; PIA2_CRB init value
-        ;STA     PIA2_CRB
-
-        ;LDA     PIA1PA
-        ;STA     PIA1_PA
-        ;LDA     PIA1PB
-        ;STA     PIA1_PB
-
         RTS
 
 ;-----------------------------------------------------------------------
 ; Reset VIA and userport
 ; http://www.zimmers.net/cbmpics/cbm/PETx/petmem.txt
 RESETVIA SUBROUTINE
-        SEI                     ; Disable interrupts
         LDA     #$00
         STA     VIA_DDRA
         ;STA     VIA_ACR
@@ -701,7 +679,6 @@ RESETVIA SUBROUTINE
         STA     VIA_PCR
         LDA     #$80
         ;STA     VIA_IER
-        CLI                     ; Enable interrupts
 
         RTS
 
