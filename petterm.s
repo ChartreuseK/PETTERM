@@ -410,6 +410,8 @@ START	SUBROUTINE
 
 	JSR	RESETPIA
 	JSR	RESETVIA
+	JSR	$FFCC		; CLRCHN
+	JSR	KRESETIO
 
         LDX	SP		; Retrieve initial start of stack
         TXS			; Set stack pointer to top of stack
@@ -655,11 +657,36 @@ RESETVIA SUBROUTINE
         STA     VIA_PCR
         LDA     #$80
         STA     VIA_IER
+
+
+        LDA     VIA_TIM2L       ;4; Acknowledge
+        LDA     VIA_TIM2H       ;4; Acknowledge
+        LDA     VIA_PORTAH      ;4; Clear any pending CA1 interrupts
+        LDA     VIA_PORTA       ;4;
+        LDA     VIA_TIM1L       ;4; Acknowledge
+        LDA     VIA_TIM1H       ;4; Acknowledge
+
         RTS
 
 ;----------------------------------------------------------------------------
 ; Initialize PIA
 RESETPIA SUBROUTINE
+
+        ; Disable interrupts
+        SEI
+
+        ; Restore IRQ vector init values
+        LDA     IRQB1LO
+        ;STA     BAS1_VECT_IRQ
+        LDA     IRQB1HI
+        ;STA     BAS1_VECT_IRQ+1
+        LDA     IRQB4LO
+        STA     BAS4_VECT_IRQ
+        LDA     IRQB4HI
+        STA     BAS4_VECT_IRQ+1
+
+        ; Enable interrupts
+        CLI
 
         ;LDA     PIA1A           ; PIA1_CRA init value
         ;STA     PIA1_CRA
@@ -704,24 +731,38 @@ RESETPIA SUBROUTINE
 	STA	PIA2_CRB	; CB2 is set for output, and is set high
 	STA	PIA2_PB		; Put #$FF as output of port B, because IEEE
 				; 'low' is 1 and V.V.
-
-        ; Disable interrupts
-        SEI
-
-        ; Restore IRQ vector init values
-        LDA     IRQB1LO
-        ;STA     BAS1_VECT_IRQ
-        LDA     IRQB1HI
-        ;STA     BAS1_VECT_IRQ+1
-        LDA     IRQB4LO
-        STA     BAS4_VECT_IRQ
-        LDA     IRQB4HI
-        STA     BAS4_VECT_IRQ+1
-
-        ; Enable interrupts
-        CLI
-
         RTS
+
+KRESETIO SUBROUTINE
+.iE60F	LDA #$7F
+	STA $E84E
+	LDA #$0F
+	STA $E810	; PIA 1						CHIP
+	ASL
+	STA $E840	; VIA						CHIP
+	STA $E842
+	STX $E822
+	STX $E845
+	LDA #$3D
+	STA $E813
+	BIT $E812
+	LDA #$3C
+	STA $E821
+	STA $E823
+	STA $E811
+	STX $E822
+	LDA #$0E
+	STA $E84E
+	;JSR $E1D2	; Exit Window
+	LDA #$10
+	STA $E84B
+	LDA #$0F
+	STA $E84A
+	LDX #$07
+.iE6B7	LDA $E74D,X	; Timer 2 LO Values			DATA
+	STA $E848
+.sE6D0	RTS
+
 
 ;----------------------------------------------------------------------------
 
