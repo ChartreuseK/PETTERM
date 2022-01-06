@@ -408,9 +408,11 @@ START	SUBROUTINE
 .done	LDA	#0
 	STA	EXITFLG
 
+	JSR 	RESETIRQ
+
+	SEI
 	JSR	RESETPIA
 	JSR	RESETVIA
-	SEI
 	JSR	KRESETIO
 	CLI
 
@@ -629,50 +631,9 @@ INITVIA SUBROUTINE
 	STA	VIA_IER
 	RTS
 
-;-----------------------------------------------------------------------
-; Reset VIA and userport
-; http://www.zimmers.net/cbmpics/cbm/PETx/petmem.txt
-RESETVIA SUBROUTINE
-	SEI			; Disable interrupts
-        LDA     #$00
-        STA     VIA_DDRA
-        STA     VIA_ACR
-        STA     VIA_IFR
-	STA	VIA_SR
-	LDA	#$1E
-	STA	VIA_TIM1L	
-	LDA	#$41
-	STA	VIA_TIM1LL
-        LDA     #$FF
-	STA	VIA_PORTB
-	STA	VIA_PORTAH
-	STA	VIA_PORTA
-        STA     VIA_TIM1H
-	STA	VIA_TIM1HL
-	LDA	#$1B
-	STA	VIA_TIM2L
-	LDA	#$D5
-	STA	VIA_TIM2H
-	LDA	#$1E
-	STA	VIA_DDRB
-        LDA     #$0C
-        STA     VIA_PCR
-        LDA     #$80
-        STA     VIA_IER
-	CLI			; Enable interrupts
-
-        ;LDA     VIA_TIM2L       ;4; Acknowledge
-        ;LDA     VIA_TIM2H       ;4; Acknowledge
-        ;LDA     VIA_PORTAH      ;4; Clear any pending CA1 interrupts
-        ;LDA     VIA_PORTA       ;4;
-        ;LDA     VIA_TIM1L       ;4; Acknowledge
-        ;LDA     VIA_TIM1H       ;4; Acknowledge
-
-        RTS
-
 ;----------------------------------------------------------------------------
-; Initialize PIA
-RESETPIA SUBROUTINE
+; Reset IRQ vector
+RESETIRQ SUBROUTINE
 
         ; Disable interrupts
         SEI
@@ -688,6 +649,12 @@ RESETPIA SUBROUTINE
         ; Enable interrupts
         CLI
 
+;----------------------------------------------------------------------------
+; Reset PIA
+RESETPIA SUBROUTINE
+
+        ; Restore PIA1/2 init values
+
         ;LDA     PIA1A           ; PIA1_CRA init value
         ;STA     PIA1_CRA
         ;LDA     PIA1B           ; PIA1_CRB init value
@@ -697,42 +664,50 @@ RESETPIA SUBROUTINE
         ;LDA     PIA2B           ; PIA2_CRB init value
         ;STA     PIA2_CRB
 
-        ; Restore PIA1 PA/PB init values
         ;LDA     PIA1PA
         ;STA     PIA1_PA
         ;LDA     PIA1PB
         ;STA     PIA1_PB
 
-	; Reset PIA1/2
-	;LDA	#0
-	;STA	PIA1_PA
-	;STA	PIA1_PB
-	;LDA	#$0F
-	;STA	PIA1_PA		; This is currently DDRA, 4 inputs and 4 outputs
-	;LDA	#$3D
-	;STA	PIA1_CRB	; DDRB implictly left with #0, i.e. all inputs
-				; Control reg B enables CB1 interrupt with active
-				; low, and sets CB2 high
-	;BIT	PIA1_PB		; Seems to be intended to clear interrupt flags
-				; in PIA1_CRB
-	;LDA	#$3C
-	;STA	PIA1_CRA	; Switches to Port A from DDRA, disables
-				; interrupts, sets CA2 high
-	
-	;LDA	#0
-	;STA	PIA2_PA
-	;STA	PIA2_PB	
-	;LDX	#$FF
-	;STX	PIA2_PB		; This is currently DDRB, so it's configured for
-				; output on all 8 bits
-	;LDA	#$3C
-	;STA	PIA2_CRA	; DDRA implicitly left with inputs. CA2 is set
-				; for output & high
-	;STA	PIA2_CRB	; CB2 is set for output, and is set high
-	;STA	PIA2_PB		; Put #$FF as output of port B, because IEEE
-				; 'low' is 1 and V.V.
         RTS
 
+;-----------------------------------------------------------------------
+; Reset VIA and userport
+; http://www.zimmers.net/cbmpics/cbm/PETx/petmem.txt
+RESETVIA SUBROUTINE
+        SEI                     ; Disable interrupts
+        LDA     #$00
+        STA     VIA_DDRA
+        ;STA     VIA_ACR
+        STA     VIA_IFR
+        ;STA     VIA_SR
+        LDA     #$1E
+        STA     VIA_TIM1L
+        LDA     #$41
+        STA     VIA_TIM1LL
+        LDA     #$FF
+        ;STA     VIA_PORTB
+        STA     VIA_PORTAH
+        STA     VIA_PORTA
+        ;STA     VIA_TIM1H
+        STA     VIA_TIM1HL
+        LDA     #$1B
+        ;STA     VIA_TIM2L
+        LDA     #$D5
+        STA     VIA_TIM2H
+        LDA     #$1E
+        ;STA     VIA_DDRB
+        LDA     #$0C
+        STA     VIA_PCR
+        LDA     #$80
+        ;STA     VIA_IER
+        CLI                     ; Enable interrupts
+
+        RTS
+
+;-----------------------------------------------------------------------
+; Reset VIA and PIA according to how the PET kernel does it.
+; http://www.zimmers.net/anonftp/pub/cbm/src/pet/pet_rom4_disassembly.txt
 KRESETIO SUBROUTINE
 .iE60F	LDA	#$7F
 	STA	VIA_IER
@@ -743,26 +718,26 @@ KRESETIO SUBROUTINE
 	STA	PIA1_PA		; PIA 1
 	ASL
 	STA	VIA_PORTB	; VIA
-	STA VIA_DDRB
-	STX PIA2_PB
-	STX VIA_TIM1H
-	LDA #$3D
-	STA PIA1_CRB
-	BIT PIA1_PB
-	LDA #$3C
-	STA PIA2_CRA
-	STA PIA2_CRB
-	STA PIA1_CRA
-	STX PIA2_PB
-	LDA #$0E
-	STA VIA_IER
-	LDA #$10
-	STA VIA_ACR
-	LDA #$0F
-	STA VIA_SR
-	LDX #$07
-.iE6B7	LDA $E74D,X	; Timer 2 LO Values			DATA
-	STA VIA_TIM2L
+	STA	VIA_DDRB
+	STX	PIA2_PB
+	STX	VIA_TIM1H
+	LDA	#$3D
+	STA	PIA1_CRB
+	BIT	PIA1_PB
+	LDA	#$3C
+	STA	PIA2_CRA
+	STA	PIA2_CRB
+	STA	PIA1_CRA
+	STX	PIA2_PB
+	LDA	#$0E
+	STA	VIA_IER
+	LDA	#$10
+	STA	VIA_ACR
+	LDA	#$0F
+	STA	VIA_SR
+	LDX	#$07
+.iE6B7	LDA	$E74D,X	; Timer 2 LO Values			DATA
+	STA	VIA_TIM2L
 .sE6D0	RTS
 
 
