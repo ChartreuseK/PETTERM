@@ -410,8 +410,9 @@ START	SUBROUTINE
 
 	JSR	RESETPIA
 	JSR	RESETVIA
-	JSR	$FFCC		; CLRCHN
+	SEI
 	JSR	KRESETIO
+	CLI
 
         LDX	SP		; Retrieve initial start of stack
         TXS			; Set stack pointer to top of stack
@@ -632,6 +633,7 @@ INITVIA SUBROUTINE
 ; Reset VIA and userport
 ; http://www.zimmers.net/cbmpics/cbm/PETx/petmem.txt
 RESETVIA SUBROUTINE
+	SEI			; Disable interrupts
         LDA     #$00
         STA     VIA_DDRA
         STA     VIA_ACR
@@ -657,14 +659,14 @@ RESETVIA SUBROUTINE
         STA     VIA_PCR
         LDA     #$80
         STA     VIA_IER
+	CLI			; Enable interrupts
 
-
-        LDA     VIA_TIM2L       ;4; Acknowledge
-        LDA     VIA_TIM2H       ;4; Acknowledge
-        LDA     VIA_PORTAH      ;4; Clear any pending CA1 interrupts
-        LDA     VIA_PORTA       ;4;
-        LDA     VIA_TIM1L       ;4; Acknowledge
-        LDA     VIA_TIM1H       ;4; Acknowledge
+        ;LDA     VIA_TIM2L       ;4; Acknowledge
+        ;LDA     VIA_TIM2H       ;4; Acknowledge
+        ;LDA     VIA_PORTAH      ;4; Clear any pending CA1 interrupts
+        ;LDA     VIA_PORTA       ;4;
+        ;LDA     VIA_TIM1L       ;4; Acknowledge
+        ;LDA     VIA_TIM1H       ;4; Acknowledge
 
         RTS
 
@@ -674,7 +676,6 @@ RESETPIA SUBROUTINE
 
         ; Disable interrupts
         SEI
-
         ; Restore IRQ vector init values
         LDA     IRQB1LO
         ;STA     BAS1_VECT_IRQ
@@ -684,7 +685,6 @@ RESETPIA SUBROUTINE
         STA     BAS4_VECT_IRQ
         LDA     IRQB4HI
         STA     BAS4_VECT_IRQ+1
-
         ; Enable interrupts
         CLI
 
@@ -704,63 +704,65 @@ RESETPIA SUBROUTINE
         ;STA     PIA1_PB
 
 	; Reset PIA1/2
-	LDA	#0
-	STA	PIA1_PA
-	STA	PIA1_PB
-	LDA	#$0F
-	STA	PIA1_PA		; This is currently DDRA, 4 inputs and 4 outputs
-	LDA	#$3D
-	STA	PIA1_CRB	; DDRB implictly left with #0, i.e. all inputs
+	;LDA	#0
+	;STA	PIA1_PA
+	;STA	PIA1_PB
+	;LDA	#$0F
+	;STA	PIA1_PA		; This is currently DDRA, 4 inputs and 4 outputs
+	;LDA	#$3D
+	;STA	PIA1_CRB	; DDRB implictly left with #0, i.e. all inputs
 				; Control reg B enables CB1 interrupt with active
 				; low, and sets CB2 high
-	BIT	PIA1_PB		; Seems to be intended to clear interrupt flags
+	;BIT	PIA1_PB		; Seems to be intended to clear interrupt flags
 				; in PIA1_CRB
-	LDA	#$3C
-	STA	PIA1_CRA	; Switches to Port A from DDRA, disables
+	;LDA	#$3C
+	;STA	PIA1_CRA	; Switches to Port A from DDRA, disables
 				; interrupts, sets CA2 high
 	
-	LDA	#0
-	STA	PIA2_PA
-	STA	PIA2_PB	
-	LDX	#$FF
-	STX	PIA2_PB		; This is currently DDRB, so it's configured for
+	;LDA	#0
+	;STA	PIA2_PA
+	;STA	PIA2_PB	
+	;LDX	#$FF
+	;STX	PIA2_PB		; This is currently DDRB, so it's configured for
 				; output on all 8 bits
-	LDA	#$3C
-	STA	PIA2_CRA	; DDRA implicitly left with inputs. CA2 is set
+	;LDA	#$3C
+	;STA	PIA2_CRA	; DDRA implicitly left with inputs. CA2 is set
 				; for output & high
-	STA	PIA2_CRB	; CB2 is set for output, and is set high
-	STA	PIA2_PB		; Put #$FF as output of port B, because IEEE
+	;STA	PIA2_CRB	; CB2 is set for output, and is set high
+	;STA	PIA2_PB		; Put #$FF as output of port B, because IEEE
 				; 'low' is 1 and V.V.
         RTS
 
 KRESETIO SUBROUTINE
-.iE60F	LDA #$7F
-	STA $E84E
-	LDA #$0F
-	STA $E810	; PIA 1						CHIP
+.iE60F	LDA	#$7F
+	STA	VIA_IER
+ 	LDX #$6D
+.iE61C	DEX
+ 	BPL .iE61C
+	LDA	#$0F
+	STA	PIA1_PA		; PIA 1
 	ASL
-	STA $E840	; VIA						CHIP
-	STA $E842
-	STX $E822
-	STX $E845
+	STA	VIA_PORTB	; VIA
+	STA VIA_DDRB
+	STX PIA2_PB
+	STX VIA_TIM1H
 	LDA #$3D
-	STA $E813
-	BIT $E812
+	STA PIA1_CRB
+	BIT PIA1_PB
 	LDA #$3C
-	STA $E821
-	STA $E823
-	STA $E811
-	STX $E822
+	STA PIA2_CRA
+	STA PIA2_CRB
+	STA PIA1_CRA
+	STX PIA2_PB
 	LDA #$0E
-	STA $E84E
-	;JSR $E1D2	; Exit Window
+	STA VIA_IER
 	LDA #$10
-	STA $E84B
+	STA VIA_ACR
 	LDA #$0F
-	STA $E84A
+	STA VIA_SR
 	LDX #$07
 .iE6B7	LDA $E74D,X	; Timer 2 LO Values			DATA
-	STA $E848
+	STA VIA_TIM2L
 .sE6D0	RTS
 
 
