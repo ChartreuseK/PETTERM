@@ -38,7 +38,7 @@ VIA_IFR    EQU	$E84D		; Interrupt flag register
 VIA_IER    EQU	$E84E		; Interrupt enable register
 VIA_PORTA  EQU	$E84F		; User-port without CA2 handshake
 
-
+; 6520 PIA
 PIA1_PA	   EQU	$E810
 PIA1_PB	   EQU	$E812
 PIA1_CRA   EQU  $E811
@@ -46,8 +46,6 @@ PIA1_CRB   EQU  $E813
 
 RXBUF	   EQU $0300		; Ring buffer of recieved chars
 
-
-PIA2_PA	   EQU	$E820
 PIA2_PB    EQU	$E822
 PIA2_CRA   EQU  $E821
 PIA2_CRB   EQU  $E823
@@ -70,6 +68,18 @@ BAS1_VECT_BRK  EQU	$0216	; 216/217 - BRK vector
 
 ; Start of BASIC on PET/CBM computers
 SOB		EQU	$0401
+
+; Zero Page variables
+; $4B to $50 is free
+CURLOC		EQU	$4B	; 16-bit word
+TMPA		EQU	$4D	; 16-bit word
+TMPA2		EQU	$4F	; 16-bit word
+; $54 to $5D is free
+PTRLO		EQU	$54	; byte
+PTRHI		EQU	$55	; byte
+; $B1 to $C3 is free if tape not being read or written
+ANSISTK		EQU	$B1	; 16 bytes
+
 
 MODE1_ECHO	EQU	$80
 MODE1_CASE	EQU	$40

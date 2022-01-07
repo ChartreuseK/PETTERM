@@ -111,7 +111,7 @@
 ;  routines as much.
 ;-----------------------------------------------------------------------
 	SEG.U	ZPAGE
-	RORG	$0
+	RORG	$3000
 	
 	INCLUDE	"zpage.s"
 	
@@ -381,7 +381,9 @@ START	SUBROUTINE
 
 .termkey
 	CMP	#$F0		; $F0 - Menu key
-	BEQ	.remenu
+	BNE	.tkmore
+	JMP	.remenu
+.tkmore	
 	CMP	#$F1		; $F1 - Up arrow
 	BEQ	.arrowkey
 	CMP	#$F2		; $F2 - Down arrow
@@ -657,14 +659,10 @@ RESETVIA SUBROUTINE
         STA     VIA_IFR
         LDA     #$1E
         STA     VIA_TIM1L
-        LDA     #$41
-        STA     VIA_TIM1LL
         LDA     #$FF
         STA     VIA_PORTAH
         STA     VIA_PORTA
         STA     VIA_TIM1HL
-        LDA     #$D5
-        STA     VIA_TIM2H
         LDA     #$0C
         STA     VIA_PCR
         RTS

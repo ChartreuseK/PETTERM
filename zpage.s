@@ -21,12 +21,12 @@ BAUD	DS.B	1		; Current baud rate, index into table
 COL	DS.B	1		; Current cursor position		
 ROW	DS.B	1
 
-CURLOC	DS.W	1		; Pointer to current screen location
+;CURLOC	DS.W	1		; Pointer to current screen location
 TMP1	DS.B	1	
 TMP2	DS.B	1
 
-TMPA	DS.W	1
-TMPA2	DS.W	1
+;TMPA	DS.W	1
+;TMPA2	DS.W	1
 CNT	DS.B	1	
 
 
@@ -63,7 +63,7 @@ KEYOFF	DS.B	1		; Keyboard matrix offset for shift
 KBDTMP	DS.B 	1		; Keyboard scanning temp, to allow BIT instruction
 
 ANSISTKL	EQU	16	; Allow up to 16 arguments (any more will just be dropped)
-ANSISTK	DS.B	ANSISTKL	; The commands we support mainly take 1 or 2, though SGR 
+;ANSISTK	DS.B	ANSISTKL	; The commands we support mainly take 1 or 2, though SGR 
 				; could have a long chain of attributes
 ANSISTKI DS.B	1
 ANSIIN	DS.B	1		; Are we inside an escape sequence
@@ -90,8 +90,8 @@ BLENHI	DS.B	1		; BASIC len hi byte
 BTMP1	DS.B	1		; BASIC temp var
 ENDLO	DS.B	1		; BASIC end lo byte
 ENDHI	DS.B	1		; BASIC end hi byte
-PTRLO	DS.B	1		; BASIC ptr lo byte
-PTRHI	DS.B	1		; BASIC ptr hi byte
+;PTRLO	DS.B	1		; BASIC ptr lo byte
+;PTRHI	DS.B	1		; BASIC ptr hi byte
 ;IRQB1LO DS.B    1               ; Hardware interrupt lo byte for BASIC 1
 ;IRQB1HI DS.B    1               ; Hardware interrupt hi byte for BASIC 1
 IRQB4LO DS.B    1               ; Hardware interrupt lo byte for BASIC 2/4
