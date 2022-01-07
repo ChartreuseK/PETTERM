@@ -111,7 +111,7 @@
 ;  routines as much.
 ;-----------------------------------------------------------------------
 	SEG.U	ZPAGE
-	RORG	$3000
+	RORG	$2000
 	
 	INCLUDE	"zpage.s"
 	
@@ -129,7 +129,7 @@
 ;-----------------------------------------------------------------------
 ; Start of loaded data
 	SEG	CODE
-	ORG	$1000           ; Start address for PET computers
+	ORG	$800           ; Load high into BASIC memory
 
 	JMP	INIT		; Skip BASIC loader -APW
 ;-----------------------------------------------------------------------
