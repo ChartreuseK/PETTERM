@@ -405,9 +405,7 @@ START	SUBROUTINE
 	JSR	SENDCH
 
 	JMP	.loop
-.done	LDA	#0
-	STA	EXITFLG
-
+.done	
 	JSR 	RESETIRQ
 
 	SEI
@@ -656,30 +654,19 @@ RESETIRQ SUBROUTINE
 RESETVIA SUBROUTINE
         LDA     #$00
         STA     VIA_DDRA
-        ;STA     VIA_ACR
         STA     VIA_IFR
-        ;STA     VIA_SR
         LDA     #$1E
         STA     VIA_TIM1L
         LDA     #$41
         STA     VIA_TIM1LL
         LDA     #$FF
-        ;STA     VIA_PORTB
         STA     VIA_PORTAH
         STA     VIA_PORTA
-        ;STA     VIA_TIM1H
         STA     VIA_TIM1HL
-        LDA     #$1B
-        ;STA     VIA_TIM2L
         LDA     #$D5
         STA     VIA_TIM2H
-        LDA     #$1E
-        ;STA     VIA_DDRB
         LDA     #$0C
         STA     VIA_PCR
-        LDA     #$80
-        ;STA     VIA_IER
-
         RTS
 
 ;-----------------------------------------------------------------------
