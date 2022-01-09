@@ -106,12 +106,13 @@
 
 ;-----------------------------------------------------------------------
 ; Zero page definitions
-; TODO: Should we move this to program memory so we don't overwrite
-;  any BASIC variables? Then we don't have to worry about using KERNAL
-;  routines as much.
+; Originally in zero page memory, these variables have been moved to
+; program memory. For any needed to be zero page for indirect, indexed
+; addressing mode, we have now located these explictly in constants.s.
+
 ;-----------------------------------------------------------------------
 	SEG.U	ZPAGE
-	RORG	$2000
+	RORG	MYRORG		; RORG location for this memory segment
 	
 	INCLUDE	"zpage.s"
 	
