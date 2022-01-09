@@ -161,7 +161,7 @@ static unsigned char tx_pet(int fd)
 	 if (bcount > 1) { // skip first two bytes
              if (DEBUG) printf("0x%02x ", buffer[0]);
              write(fd, &buffer[0], 1);
-             usleep(200);
+             usleep(200000);
 	 }
 	 bcount++;
       }
