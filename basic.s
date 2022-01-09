@@ -18,7 +18,7 @@ SAVELOAD SUBROUTINE
         LDX     #<SOB
         STX     PTRLO
         LDY     #>SOB
-        STY     PTRHI
+        STY     PTRHI		
 	STY	ENDHI		; Init value
 
 .lloop				; Load loop
@@ -27,65 +27,40 @@ SAVELOAD SUBROUTINE
         CPX     RXBUFW
         BEQ     .lnorx          ; Loop till we get a character in
 
-        ; Remove cursor from old position before handling
-        LDY     #0
-        LDA     (CURLOC),Y
-        ;AND    #$7F
-        EOR     #$80
-        STA     (CURLOC),Y
-
         ; Handle new byte
         LDA     RXBUF,X         ; New character
         TAX                     ; Save
         INC     RXBUFR          ; Acknowledge byte by incrementing 
         TXA
 
-	TAX			; Debug print
-	JSR	HEXOUT
-	TXA
+	;TAX			; Debug print
+	;JSR	HEXOUT
+	;TXA
 
 ; check for the first 2 bytes
 	LDX	BTMP1
 	CPX	#0
 	BNE	.wri1
 	STA	ENDLO		; Store end byte lo
-	TAX
-	JSR	HEXOUT
-	TXA
 .wri1	LDX	BTMP1
 	CPX	#1
 	BNE	.wri2
 	STA	ENDHI		; Store end byte hi
-	TAX
-	JSR	HEXOUT
-	TXA
 .wri2
         LDY     #0
         STA     (PTRLO),Y	; Store to BASIC mem
 
-        LDX     BTMP1
-        INX
-        STX     BTMP1            ; Inc BTMP1
+        LDA     BTMP1
+        CMP	#$02
+	BCS	.inc16a		
+        INC     BTMP1            ; Inc BTMP1 if less than 2
 
 ; increment BASIC ptr
+.inc16a
 	INC	PTRLO
 	BNE	.inc16ena
 	INC	PTRLO
 .inc16ena
-
-        ; Set cursor at new position
-        LDY     #0
-        LDA     (CURLOC),Y
-        ;ORA    #$80
-        EOR     #$80
-        STA     (CURLOC),Y
-
-	TAX
-	LDA	PTRHI
-	JSR 	HEXOUT
-	LDA	PTRLO
-	JSR	HEXOUT
-	TXA
 
 	LDX	PTRHI
 	CPX	ENDHI		; cmp step ptr to end hi
@@ -93,6 +68,16 @@ SAVELOAD SUBROUTINE
 	LDX	PTRLO
 	CPX	ENDLO		; cmp step ptr to end lo
 	BNE	.lloop		; keep reading
+
+; end of BASIC LOAD code
+
+        LDA     #<L_DONE
+        LDY     #>L_DONE
+        JSR     PRINTSTR
+
+; exit to menu
+.lmenu
+        RTS
 
 .lnorx
 	LDA	KBDNEW
@@ -109,16 +94,6 @@ SAVELOAD SUBROUTINE
 
 .lnokey
 	JMP	.lloop
-.lmenu	
-	RTS			; Return to main menu
-; end of BASIC LOAD code
-        LDA     #<L_DONE
-        LDY     #>L_DONE
-        JSR     PRINTSTR
-
-	; End of BASIC LOAD code	
-
-	RTS
 
 .bsave
 ;	LDA	#0
