@@ -13,6 +13,14 @@ PETTERM can now handle 2400 baud, along with much improved ANSI terminal compati
 
 Requires 8kB of RAM. (For 4kB PET's please use 0.4.0 version or prior for now.)
 
+## Features
+
+- Can work with a 40 or 80 column PETs with either the graphics or business keyboard.
+- Can be loaded from tape or disk.
+- Works on all versions of BASIC including the oldest PET 2001s with BASIC 1.
+- Can work with as low as 8kB of RAM.
+- Requires only a simple two wire serial interface.
+
 ## Usage
 
 - Off/Rvs key acts as a Ctrl key.
@@ -43,14 +51,6 @@ If coming from a version prior to 0.4.0, a connection between pin C and B of the
 This change is required for all baud rates in this version.
 
 **Warning:** Connections to the PET user port are RS-232 TTL level signals (0V to +5V). Standard RS-232 serial level signals are -13V to +13V (or more). Connecting standard RS-232 level signals to your PET's user port without an RS-232 to TTL interface will damage your computer and make you sad. (See this [SparkFun explanation](https://www.sparkfun.com/tutorials/215) for more details.)
-
-## Features
-
-- Can work with a 40 or 80 column PETs with either the graphics or business keyboard.
-- Can be loaded from tape or disk.
-- Works on all versions of BASIC including the oldest PET 2001s with BASIC 1.
-- Can work with as low as 8kB of RAM.
-- Requires only a simple two wire serial interface.
 
 ## Files
 
