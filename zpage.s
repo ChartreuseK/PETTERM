@@ -77,9 +77,9 @@ LASTCH	DS.B	1		; Last printable character drawn to screen
 RXBUFW	DS.B	1		; Write pointer
 RXBUFR	DS.B	1		; Read pointer
 KFAST	DS.B	1		; 0 if slow/normal scanning, 1 for fast split scanning
-
 LOADB	DS.B	1		; Load BASIC program flag
 SAVEB	DS.B	1		; Save BASIC program flag
+    IFCONST BASIC
 FNAMEW	DS.B	1		; File name write pointer
 FNAMER	DS.B	1		; File name read pointer
 FNAME	DS.B	1		; File name pointer
@@ -90,8 +90,7 @@ BLENHI	DS.B	1		; BASIC len hi byte
 BTMP1	DS.B	1		; BASIC temp var
 ENDLO	DS.B	1		; BASIC end lo byte
 ENDHI	DS.B	1		; BASIC end hi byte
-;PTRLO	DS.B	1		; BASIC ptr lo byte
-;PTRHI	DS.B	1		; BASIC ptr hi byte
+    ENDIF
 ;IRQB1LO DS.B    1               ; Hardware interrupt lo byte for BASIC 1
 ;IRQB1HI DS.B    1               ; Hardware interrupt hi byte for BASIC 1
 IRQB4LO DS.B    1               ; Hardware interrupt lo byte for BASIC 2/4
