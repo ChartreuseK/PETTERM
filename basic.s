@@ -15,6 +15,20 @@ SAVELOAD SUBROUTINE
 	STA	LOADB		; Clear BASIC load flag
 	STA	BTMP1		; Clear BTMP1 byte count
 
+        JSR     CLRSCR
+
+        LDX     #0
+        LDY     #0
+        JSR     GOTOXY
+
+        LDA     #<L_WAIT
+        LDY     #>L_WAIT
+        JSR     PRINTSTR
+
+        LDX     #0
+        LDY     #2#
+        JSR     GOTOXY
+
         LDX     #<SOB
         STX     PTRLO
         LDY     #>SOB
@@ -106,6 +120,16 @@ SAVELOAD SUBROUTINE
 
 	JSR	BLEN		; Calc BASIC len
 
+; increment BASIC length by 2 bytes
+        INC     BLENLO
+        BNE     .inc16enc
+        INC     BLENLO
+.inc16enc
+        INC     BLENLO
+        BNE     .inc16end
+        INC     BLENLO
+.inc16end
+
         JSR     CLRSCR
 
         LDX     #0
@@ -195,6 +219,12 @@ SAVELOAD SUBROUTINE
 	LDA	BLENHI		; BASIC len hi byte
         JSR     SENDCH
 
+; send SOB address
+        LDA     #<SOB
+        JSR	SENDCH
+        LDA     #>SOB
+        JSR	SENDCH
+
 	LDA	ENDLO
 
 	LDX	BTMP1
@@ -204,7 +234,7 @@ SAVELOAD SUBROUTINE
 .read2				; read BASIC program
 	INX
 	STX	BTMP1
-	JSR	SENDCH		; send BASIC bytes
+	JSR	SENDCH		; send BASIC program byte
 
 ; increment BASIC ptr
 	INC	PTRLO
@@ -264,6 +294,9 @@ S_PROMPT
 
 S_DONE
 	DC.B	"SAVING DONE!",0
+
+L_WAIT
+        DC.B    "WAITING FOR PROGRAM DATA... ",0
 
 L_DONE
 	DC.B	"LOADING DONE!",0
