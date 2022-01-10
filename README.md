@@ -13,6 +13,8 @@ PETTERM can now handle 2400 baud, along with much improved ANSI terminal compati
 
 Requires 8kB of RAM. (For 4kB PET's please use 0.4.0 version or prior for now.)
 
+Support to Load and Save BASIC programs over the serial connection.
+
 ## Features
 
 - Can work with a 40 or 80 column PETs with either the graphics or business keyboard.
