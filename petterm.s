@@ -1,6 +1,6 @@
 ;-----------------------------------------------------------------------
 ; PETTerm
-; Version 0.5.0
+; Version 0.6.0
 ;
 ; A bit-banged full duplex serial terminal for the PET 2001 computers,
 ; including those running BASIC 1. 
@@ -98,7 +98,60 @@
 ;     minicom (for nesting your serial terminals of course)
 ;     alpine (a bit cramped at 40 columns)
 ;     nethack (seems to work just fine)
+;
+; 0.6.0
+;   - Added menu options and support for sending or receiving BASIC programs. - Adam Whitney, K0FFY
+;
+;     The SAVE BASIC PROGRAM option will send the current in-memory BASIC program over the 
+;      serial connection with a header of the following bytes:
+;         0x00 0x00 0x00 0x53 (S) 0x41 (A) 0x56 (V) 0x45 (E)
+;      followed immediately by two bytes giving the length of the BASIC program in bytes in
+;      little-endian order (Commodore style).
+;    
+;     For example, let assume the following BASIC program is currenlty in memory:
+;        10 PRINT"HI"
+; 
+;     The SAVE BASIC PROGRAM option will send the following data over serial:
+;        0x00 0x00 0x00 0x53 0x41 0x56 0x45 0x0c
+;        0x00 0x01 0x04 0x0b 0x04 0x0a 0x00 0x99
+;        0x22 0x48 0x49 0x22 0x00
 ;     
+;     This is the "000SAVE" header, the program length of 12 bytes (0x0c 0x00),
+;      and then the entire contents of the BASIC program including the first two bytes
+;      denoting the starting address of 0x0401 (the start of BASIC on the PET),
+;      which would be the 12 bytes saved if this program were written to tape or disk.
+;
+;     The LOAD BASIC PROGRAM option will wait to receive data over the serial connection,
+;      and then write each byte received to the start of BASIC address (0x0401 on the PET)
+;      until all bytes have been received and stored according to the first two bytes which
+;      specified the 2-byte pointer to the next line of BASIC code (the end of the current
+;      program).
+;
+;     For example, if the 10 PRINT"HI" program from above was loaded using this option,
+;      then the following bytes would be written to the PET's memory starting at address
+;      0x0401:
+;
+;      Memory Address: 0401 0402 0403 0404 0405 0406 0407 0408 0409 040a
+;      Data:           0x0b 0x04 0x0a 0x00 0x99 0x22 0x48 0x49 0x22 0x00
+;
+;     The user can exit the LOAD BASIC PROGRAM option at any point by pressing the CLR/HOME
+;      key.
+;     
+;     Note: The Makefile was modified to build versions of PETTERM that both include and
+;      do not include these new options.
+;
+;   - Included a POSIX C program and Makefile in the test folder than can be used for the
+;     SAVE BASIC and LOAD BASIC options.
+;   - Added an EXIT option to allow the user to exit PETTERM and return to BASIC, which was
+;     needed to support the LOAD BASIC PROGRAM option.
+;
+;     To support the EXIT option to return to BASIC, the memory locate of this program was
+;     shifted to starting address of $0800 (SYS 2048). The program extends from this address
+;     to memory below the beginning of screen memory of $8000, so this should function
+;     correctly on 8k PETs. To date this program has only been tested on a 32k PET.
+;
+;     The starting address of $0800 also means that the current maximum size of the BASIC
+;     programs supported is 399 bytes.
 ;   
 ; Written for the DASM assembler
 ;----------------------------------------------------------------------- 
