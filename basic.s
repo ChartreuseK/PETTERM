@@ -115,20 +115,6 @@ SAVELOAD SUBROUTINE
 	STA	FNAMEW
 	STA	FNAMER
 	STA	FNAME
-	STA	BLENLO
-	STA	BLENHI
-
-	JSR	BLEN		; Calc BASIC len
-
-; increment BASIC length by 2 bytes
-        INC     BLENLO
-        BNE     .inc16enc
-        INC     BLENLO
-.inc16enc
-        INC     BLENLO
-        BNE     .inc16end
-        INC     BLENLO
-.inc16end
 
         JSR     CLRSCR
 
@@ -213,12 +199,6 @@ SAVELOAD SUBROUTINE
 	LDA	#$45		; E
         JSR     SENDCH
 
-; send length
-	LDA	BLENLO		; BASIC len lo byte
-        JSR     SENDCH
-	LDA	BLENHI		; BASIC len hi byte
-        JSR     SENDCH
-
 ; send SOB address
         LDA     #<SOB
         JSR	SENDCH
@@ -248,6 +228,27 @@ SAVELOAD SUBROUTINE
 	LDX	PTRLO
 	CPX	ENDLO		; cmp step ptr to end lo
 	BNE	.sloop		; keep reading
+
+; reached the end of the current BASIC line, check for next pointer
+        LDY     #0
+        LDA     (PTRLO),Y
+	CMP	#0
+	BEQ	.savend
+.newlo
+	STA	ENDLO		; save the new ENDLO byte for the next line
+	LDX	#1
+	STX	BTMP1		; set BTMP1 to read the ENDHI byte next
+
+	JSR	SENDCH		; send the byte
+
+; increment BASIC ptr
+        INC     PTRLO
+        BNE     .inc16enc
+        INC     PTRLO
+.inc16enc
+	JMP	.sloop
+
+.savend
 ; end of BASIC SAVE code
 
         LDA     #<S_DONE
@@ -256,19 +257,19 @@ SAVELOAD SUBROUTINE
 
 	RTS
 
-BLEN SUBROUTINE
-	LDX	#<SOB  		; lo byte of basic
-	STX	BASICLO
-	LDX	#>SOB  		; hi byte of basic
-	STX	BASICHI
-	SEC			; set carry flag
-	LDA 	SOB		; first lo byte
-	SBC	BASICLO		; sub other lo byte
-	STA	BLENLO 		; resulting lo byte
-	LDA	SOB+1		; first hi byte
-	SBC	BASICHI		; carry flg complmnt
-	STA	BLENHI		; resulting hi byte
-	RTS
+;BLEN SUBROUTINE
+;	LDX	#<SOB  		; lo byte of basic
+;	STX	BASICLO
+;	LDX	#>SOB  		; hi byte of basic
+;	STX	BASICHI
+;	SEC			; set carry flag
+;	LDA 	SOB		; first lo byte
+;	SBC	BASICLO		; sub other lo byte
+;	STA	BLENLO 		; resulting lo byte
+;	LDA	SOB+1		; first hi byte
+;	SBC	BASICHI		; carry flg complmnt
+;	STA	BLENHI		; resulting hi byte
+;	RTS
 
 HEXDIG SUBROUTINE
 	CMP	#$0A		; alpha digit?

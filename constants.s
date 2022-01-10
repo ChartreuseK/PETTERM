@@ -68,7 +68,7 @@ BAS1_VECT_BRK  EQU	$0216	; 216/217 - BRK vector
 
 ; Memory location for this program.
 MYORG		EQU	$1000
-MYRORG		EQU	$2000
+MYRORG		EQU	$2200
 
 ; Start of BASIC on PET/CBM computers
 SOB		EQU	$0401

@@ -146,12 +146,12 @@
 ;     needed to support the LOAD BASIC PROGRAM option.
 ;
 ;     To support the EXIT option to return to BASIC, the memory locate of this program was
-;     shifted to starting address of $0800 (SYS 2048). The program extends from this address
+;     shifted to starting address of $1000 (SYS 4096). The program extends from this address
 ;     to memory below the beginning of screen memory of $8000, so this should function
 ;     correctly on 8k PETs. To date this program has only been tested on a 32k PET.
 ;
-;     The starting address of $0800 also means that the current maximum size of the BASIC
-;     programs supported is 399 bytes.
+;     The starting address of $1000 also means that the current maximum size of the BASIC
+;     programs supported is 600 bytes.
 ;   
 ; Written for the DASM assembler
 ;----------------------------------------------------------------------- 
@@ -250,9 +250,9 @@ INIT	SUBROUTINE
 
         ; Save IRQ init value
         LDA     BAS1_VECT_IRQ
-        ;STA     IRQB1LO         ; Save IRQ lo byte for BASIC 1
+        STA     IRQB1LO         ; Save IRQ lo byte for BASIC 1
         LDA     BAS1_VECT_IRQ+1
-        ;STA     IRQB1HI         ; Save IRQ hi byte for BASIC 1
+        STA     IRQB1HI         ; Save IRQ hi byte for BASIC 1
         LDA     BAS4_VECT_IRQ
         STA     IRQB4LO         ; Save IRQ lo byte for BASIC 2/4
         LDA     BAS4_VECT_IRQ+1
@@ -697,10 +697,10 @@ RESETIRQ SUBROUTINE
         ; Disable interrupts
         SEI
         ; Restore IRQ vector init values
-        ;LDA     IRQB1LO
-        ;STA     BAS1_VECT_IRQ
-        ;LDA     IRQB1HI
-        ;STA     BAS1_VECT_IRQ+1
+        LDA     IRQB1LO
+        STA     BAS1_VECT_IRQ
+        LDA     IRQB1HI
+        STA     BAS1_VECT_IRQ+1
         LDA     IRQB4LO
         STA     BAS4_VECT_IRQ
         LDA     IRQB4HI
