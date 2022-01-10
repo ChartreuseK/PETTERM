@@ -105,34 +105,34 @@
 ;     The SAVE BASIC PROGRAM option will send the current in-memory BASIC program over the 
 ;      serial connection with a header of the following bytes:
 ;         0x00 0x00 0x00 0x53 (S) 0x41 (A) 0x56 (V) 0x45 (E)
-;      followed immediately by two bytes giving the length of the BASIC program in bytes in
-;      little-endian order (Commodore style).
+;      followed immediately by two bytes giving the starting address of the BASIC program ($0401
+;      on the Commodore PET) and then finally the remainder of the BASIC program store in the
+;      Commodore's memory.
 ;    
 ;     For example, let assume the following BASIC program is currenlty in memory:
 ;        10 PRINT"HI"
 ; 
 ;     The SAVE BASIC PROGRAM option will send the following data over serial:
-;        0x00 0x00 0x00 0x53 0x41 0x56 0x45 0x0c
-;        0x00 0x01 0x04 0x0b 0x04 0x0a 0x00 0x99
-;        0x22 0x48 0x49 0x22 0x00
+;        0x00 0x00 0x00 0x53 0x41 0x56 0x45 0x01
+;        0x04 0x0b 0x04 0x0a 0x00 0x99 0x22 0x48
+;        0x49 0x22 0x00 0x00
 ;     
-;     This is the "000SAVE" header, the program length of 12 bytes (0x0c 0x00),
-;      and then the entire contents of the BASIC program including the first two bytes
-;      denoting the starting address of 0x0401 (the start of BASIC on the PET),
-;      which would be the 12 bytes saved if this program were written to tape or disk.
+;     This is the "000SAVE" header followed by entire contents of the BASIC program including
+;      the first two bytes denoting the starting address of $0401 (the start of BASIC on the
+;      PET), which would be the same bytes saved if this program were written to tape or disk.
 ;
 ;     The LOAD BASIC PROGRAM option will wait to receive data over the serial connection,
-;      and then write each byte received to the start of BASIC address (0x0401 on the PET)
-;      until all bytes have been received and stored according to the first two bytes which
-;      specified the 2-byte pointer to the next line of BASIC code (the end of the current
-;      program).
+;      and then write each byte received to the start of BASIC address ($0401 on the PET)
+;      until all bytes have been received and stored according to the two bytes that 
+;      specify the memory pointer to the next line of BASIC code (until the pointer of
+;      $0000 is reached which designates the end of program).
 ;
 ;     For example, if the 10 PRINT"HI" program from above was loaded using this option,
 ;      then the following bytes would be written to the PET's memory starting at address
-;      0x0401:
+;      $0401:
 ;
-;      Memory Address: 0401 0402 0403 0404 0405 0406 0407 0408 0409 040a
-;      Data:           0x0b 0x04 0x0a 0x00 0x99 0x22 0x48 0x49 0x22 0x00
+;      Memory Address: 0401 0402 0403 0404 0405 0406 0407 0408 0409 040a 040b
+;      Data:           0x0b 0x04 0x0a 0x00 0x99 0x22 0x48 0x49 0x22 0x00 0x00
 ;
 ;     The user can exit the LOAD BASIC PROGRAM option at any point by pressing the CLR/HOME
 ;      key.
