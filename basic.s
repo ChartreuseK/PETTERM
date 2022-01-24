@@ -211,9 +211,28 @@ SAVELOAD SUBROUTINE
 .read1	CPX	#$01
 	BNE	.read2
 	STA	ENDHI		; store end hi byte
-.read2				; read BASIC program
-	INX
-	STX	BTMP1
+
+        INX
+        STX     BTMP1		; increment BTMP1
+
+        CMP     #0		; check for hi byte of zero
+        BNE     .read2		; continue if not zero
+	LDA	ENDLO
+	CMP	#0		; check for lo byte also zero
+	BEQ	.savend		; reached program end
+
+	LDA	ENDHI		; restore value in accumulator
+
+.read2				
+
+	LDX	BTMP1
+	CPX	#0
+	BNE	.read3
+        INX
+        STX     BTMP1           ; increment BTMP1
+
+.read3
+
 	JSR	SENDCH		; send BASIC program byte
 
 ; increment BASIC ptr
@@ -232,27 +251,28 @@ SAVELOAD SUBROUTINE
 ; reached the end of the current BASIC line, check for next pointer
         LDY     #0
         LDA     (PTRLO),Y
-	CMP	#0
-	BEQ	.savend
 .newlo
+
+        JSR     SENDCH          ; send the byte
+
 	STA	ENDLO		; save the new ENDLO byte for the next line
+
 	LDX	#1
 	STX	BTMP1		; set BTMP1 to read the ENDHI byte next
-
-	JSR	SENDCH		; send the byte
 
 ; increment BASIC ptr
         INC     PTRLO
         BNE     .inc16enc
         INC     PTRLO
 .inc16enc
+
 	JMP	.sloop
 
 .savend
 ; end of BASIC SAVE code
 
-	LDA	#0
-	JSR	SENDCH		; send final 0 byte
+	LDA	ENDHI
+	JSR	SENDCH		; send final end hi byte (zero value)
 
         LDA     #<S_DONE
         LDY     #>S_DONE
