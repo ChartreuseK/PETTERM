@@ -251,6 +251,9 @@ SAVELOAD SUBROUTINE
 .savend
 ; end of BASIC SAVE code
 
+	LDA	#0
+	JSR	SENDCH		; send final 0 byte
+
         LDA     #<S_DONE
         LDY     #>S_DONE
         JSR     PRINTSTR
