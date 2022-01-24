@@ -17,146 +17,239 @@ int bufcnt = 0;
 
 int DEBUG = 1; // DEBUG FLAG
 
+
+/* increment two-byte memory pointer */
+   void inc_pointer(int *lo, int *hi) {
+      (*lo)++;
+      if ((*lo) == 256) {
+	 (*lo) = 0;
+	 (*hi)++;
+      }
+      return;
+   } 
+
 /* get a byte from intermediate buffer of serial terminal */
-static unsigned char rx_pet(int fd)
-{
-   FILE* fout;
-   FILE* fin;
+   static unsigned char rx_pet(int fd)
+   {
+      FILE* fout;
+      FILE* fin;
 
-   char header[5] = "000";
-   char op_save[5] = "SAVE";
-   char op_load[5] = "LOAD";
-   unsigned char *rbufptr;
-   int buf_ix = 0;
+      char header[5] = "000";
+      char op_save[5] = "SAVE";
+      char op_load[5] = "LOAD";
+      unsigned char *rbufptr;
+      int buf_ix = 0;
 
-   int eot = 0;
-   int headflg = 0;
-   int lenflg = 0;
-   int saveflg = 0;
-   int loadflg = 0;
+      int eot = 0;
+      int headflg = 0;
+      int saveflg = 0;
+      int loadflg = 0;
 
-   int blen = 0;
-   int bsavcnt = 0;
+      int nextflg = 0;
+      int curlo = 0, curhi = 0;
+      int nextlo = 0, nexthi = 0;
 
-   fout = fopen("pet_basic.seq", "wb");
+      fout = fopen("pet_basic.seq", "wb");
 
-   bufcnt = read(fd, rbuf, BLEN);
+      bufcnt = read(fd, rbuf, BLEN);
 
-   while (eot == 0 && bufcnt > 0) {
-      buf_ix = 0;
-      /* buffer needs refill */
-      rbufptr = rbuf;
+      while (eot == 0 && bufcnt > 0) {
+	 buf_ix = 0;
+	 /* buffer needs refill */
+	 rbufptr = rbuf;
 
-      if (DEBUG) printf("\n\n ***** Read %d bytes.\n\n", bufcnt);
-      if (DEBUG) printf("   ");
-      for (int i = 0; i < bufcnt; i++) {
-         if (DEBUG) printf("0x%02x ", rbuf[i]);
+	 if (DEBUG) printf("\n\n ***** Read %d bytes.\n\n", bufcnt);
+	 if (DEBUG) printf("   ");
+	 for (int i = 0; i < bufcnt; i++) {
+	    if (DEBUG) printf("0x%02x ", rbuf[i]);
+	 }
+
+	 if (headflg == 0) {
+	    if (strncmp(header, rbuf, 3)) {
+	       if (DEBUG) printf("\n\n   Found header.\n\n");
+	       headflg = 1;
+	    } else {
+	       printf("ERROR: Invalid data format!\n\n");
+	       exit(1);
+	    }
+	 }
+
+	 if (headflg == 1) {
+
+	    rbufptr += 3;
+	    buf_ix += 3;
+
+	    if (strncmp(op_save, rbuf, 4)) {
+	       printf("\nSAVE operation requested.\n");
+	       saveflg = 1;
+	    } else if (strncmp(op_load, rbuf, 4)) {
+	       printf("\nLOAD operation requested.\n");
+	       loadflg = 1;
+	    } else {
+	       printf("ERROR: Invalid operation requested!\n\n");
+	       exit(1);
+	    } 
+
+	    rbufptr += 4;
+	    buf_ix += 4;
+	    headflg = 2;
+
+	 }
+
+	 if (DEBUG) printf("\n   Writing pet_basic.seq from serial data...\n");
+	 for (int i = buf_ix; i < bufcnt; i++) {
+
+	    if (curlo == 0 && curhi == 0) {
+
+	       // Begin saving now.
+	       
+	       // Get and write SOB bytes (current pointer bytes) first.
+	       curlo = rbuf[buf_ix];
+	       curhi = rbuf[buf_ix+1];
+
+	       if (DEBUG) printf("\n   Writing: 0x%02x\n", rbuf[buf_ix]);
+               if (DEBUG) printf("\n   Writing: 0x%02x\n", rbuf[buf_ix+1]);
+	       fwrite(&rbuf[buf_ix],1,1,fout);
+               fwrite(&rbuf[buf_ix+1],1,1,fout);
+
+	       rbufptr += 2;
+	       buf_ix += 2;
+
+	       // Jump iterator 'i' by two.
+	       i += 2;
+
+               // Get and write next pointer.
+
+               nextlo = rbuf[buf_ix];
+               nexthi = rbuf[buf_ix+1];
+
+               if (DEBUG) printf("\n   Writing: 0x%02x\n", rbuf[buf_ix]);
+               if (DEBUG) printf("\n   Writing: 0x%02x\n", rbuf[buf_ix+1]);
+               fwrite(&rbuf[buf_ix],1,1,fout);
+               fwrite(&rbuf[buf_ix+1],1,1,fout);
+               rbufptr += 2;
+               buf_ix += 2;
+
+	       // Jump iterator 'i' by one.
+	       i++;
+
+	       // Increment pointer by 2.
+	       inc_pointer(&curlo, &curhi);
+               inc_pointer(&curlo, &curhi);
+
+	    } else {
+
+	       if (nextflg != 1 && curlo == nextlo && curhi == nexthi) {
+
+                  if (DEBUG) printf("\n   Ready to read the next line.\n");
+
+                  // Get and write next pointer.
+                  nextlo = rbuf[buf_ix];
+   
+                  if (DEBUG) printf("\n   Writing: 0x%02x\n", rbuf[buf_ix]);
+                  fwrite(&rbuf[buf_ix],1,1,fout);
+                  rbufptr += 1;
+                  buf_ix += 1;
+   
+                  inc_pointer(&curlo, &curhi);
+
+		  nextflg = 1;
+
+	       } else if (nextflg == 1) {
+  
+                  // Get and write next pointer.
+                  nexthi = rbuf[buf_ix];
+
+                  if (DEBUG) printf("\n   Writing: 0x%02x\n", rbuf[buf_ix]);
+                  fwrite(&rbuf[buf_ix],1,1,fout);
+                  rbufptr += 1;
+                  buf_ix += 1;
+
+                  inc_pointer(&curlo, &curhi);
+		  nextflg = 0;
+ 
+	       } else {
+
+
+                  if (DEBUG) printf("\n   NextLo: 0x%02x\n", nextlo);
+                  if (DEBUG) printf("\n   NextHi: 0x%02x\n", nexthi);
+                  if (DEBUG) printf("\n   CurLo: 0x%02x\n", curlo);
+                  if (DEBUG) printf("\n   CurHi: 0x%02x\n", curhi);
+
+		  // Save next byte and increment pointer.
+                  if (DEBUG) printf("\n   Writing: 0x%02x\n", rbuf[buf_ix]);
+                  fwrite(&rbuf[buf_ix],1,1,fout);
+                  rbufptr += 1;
+                  buf_ix += 1;
+                  inc_pointer(&curlo, &curhi);
+	       }
+
+	    } // Receiving and writing program.
+
+	 } // Looping current buffer.
+
+	 if (DEBUG) printf("\n");
+	 if (nextlo == 0 && nexthi == 0) {
+	    //eot = 1;
+	 }
+
+	 if (bufcnt <= 0) {
+	    /* report error, then abort */
+	    printf ("Read buffer empty.\n");
+	    exit(1);
+	 }
+
+	 if (eot == 0) {
+	    bufcnt = read(fd, rbuf, BLEN);
+	 }
+
+      } // Loop on more buffer data.
+
+      // Write final 0 byte.
+      if (DEBUG) printf("\n   Writing final byte: 0x%02x\n", rbuf[buf_ix]);
+      fwrite(&rbuf[buf_ix],1,1,fout);
+
+      fclose(fout);
+      printf("\nFile received and saved.\n");
+
+      if (DEBUG) printf("\n   Reading pet_basic.seq for verification...\n\n");
+      fin = fopen("pet_basic.seq", "rb");
+
+      char buffer[1];
+      int rcount = 0;
+      if (fin) {
+	 /* File was opened successfully. */
+
+	 /* Attempt to read */
+	 if (DEBUG) printf("   ");
+	 while (rcount = fread(buffer, 1,1, fin) > 0) {
+	    if (DEBUG) printf("0x%02x ", buffer[0]);
+	 }
+	 if (DEBUG) printf("\n\n");
+	 fclose(fin);
       }
 
-      if (headflg == 0) {
-         if (strncmp(header, rbuf, 3)) {
-            if (DEBUG) printf("\n\n   Found header.\n\n");
-            headflg = 1;
-         } else {
-            printf("ERROR: Invalid data format!\n\n");
-            exit(1);
-         }
-      }
-
-      if (headflg == 1 && lenflg == 0) {
-
-         rbufptr += 3;
-         buf_ix += 3;
-
-         if (strncmp(op_save, rbuf, 4)) {
-            printf("\nSAVE operation requested.\n");
-            saveflg = 1;
-         } else if (strncmp(op_load, rbuf, 4)) {
-            printf("\nLOAD operation requested.\n");
-            loadflg = 1;
-         } else {
-            printf("ERROR: Invalid operation requested!\n\n");
-            exit(1);
-         } 
-
-         lenflg = 1;
-
-         rbufptr += 4;
-         buf_ix += 4;
-
-         if (saveflg == 1) {
-            blen = rbufptr[0];
-            rbufptr++;
-            blen += rbufptr[0] * 256;
-            buf_ix += 2;
-            printf("BASIC program length = %d bytes.\n", blen);
-         }
-      }
-
-      if (DEBUG) printf("\n   Writing pet_basic.seq from serial data...\n");
-      for (int i = buf_ix; i < bufcnt; i++) {
-         if (DEBUG) printf("\n   Writing: 0x%02x\n", rbuf[i]);
-         fwrite(&rbuf[i],1,1,fout);
-         bsavcnt++;
-      }
-      if (DEBUG) printf("\n");
-      if (bsavcnt >= blen) {
-         eot = 1;
-      }
-
-      if (bufcnt <= 0) {
-         /* report error, then abort */
-         printf ("Read buffer empty.\n");
-         exit(1);
-      }
-
-      if (eot == 0) {
-         bufcnt = read(fd, rbuf, BLEN);
-      }
-
+      return *rp++;
    }
 
-   fclose(fout);
-   printf("\nFile received and saved.\n");
 
-   if (DEBUG) printf("\n   Reading pet_basic.seq for verification...\n\n");
-   fin = fopen("pet_basic.seq", "rb");
+   /* send a byte from intermediate buffer of serial terminal */
+   static unsigned char tx_pet(int fd)
+   {
+      FILE* fin;
 
-   char buffer[1];
-   int rcount = 0;
-   if (fin) {
-      /* File was opened successfully. */
+      if (DEBUG) printf("\n   Reading pet_basic.seq for loading...\n\n");
+      fin = fopen("pet_basic.seq", "rb");
 
-      /* Attempt to read */
-      if (DEBUG) printf("   ");
-      while (rcount = fread(buffer, 1,1, fin) > 0) {
-         if (DEBUG) printf("0x%02x ", buffer[0]);
-      }
-      if (DEBUG) printf("\n\n");
-      fclose(fin);
-   }
+      char buffer[2];
+      char eot[8] = "\0\0\0\0\0\0\0\0";
+      int rcount = 0;
+      unsigned int bcount = 0;
+      if (fin) {
+	 /* File was opened successfully. */
 
-   return *rp++;
-}
-
-
-/* send a byte from intermediate buffer of serial terminal */
-static unsigned char tx_pet(int fd)
-{
-   FILE* fin;
-
-   if (DEBUG) printf("\n   Reading pet_basic.seq for loading...\n\n");
-   fin = fopen("pet_basic.seq", "rb");
-
-   char buffer[2];
-   char eot[8] = "\0\0\0\0\0\0\0\0";
-   int rcount = 0;
-   unsigned int bcount = 0;
-   if (fin) {
-      /* File was opened successfully. */
-
-      /* Attempt to read */
-      if (DEBUG) printf("   ");
+	 /* Attempt to read */
+	 if (DEBUG) printf("   ");
       while (rcount = fread(buffer, 1,1, fin) > 0) {
 	 if (bcount > 1) { // skip first two bytes
              if (DEBUG) printf("0x%02x ", buffer[0]);
