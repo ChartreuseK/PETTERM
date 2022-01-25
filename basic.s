@@ -73,7 +73,7 @@ SAVELOAD SUBROUTINE
 .inc16a
 	INC	PTRLO
 	BNE	.inc16ena
-	INC	PTRLO
+	INC	PTRLO+1
 .inc16ena
 
 	LDX	PTRHI
@@ -238,7 +238,7 @@ SAVELOAD SUBROUTINE
 ; increment BASIC ptr
 	INC	PTRLO
 	BNE	.inc16enb
-	INC	PTRLO
+	INC	PTRLO+1
 .inc16enb
 
 	LDX	PTRHI
@@ -263,7 +263,7 @@ SAVELOAD SUBROUTINE
 ; increment BASIC ptr
         INC     PTRLO
         BNE     .inc16enc
-        INC     PTRLO
+        INC     PTRLO+1
 .inc16enc
 
 	JMP	.sloop
