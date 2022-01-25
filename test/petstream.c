@@ -190,7 +190,7 @@ int DEBUG = 1; // DEBUG FLAG
 
 	 if (DEBUG) printf("\n");
 	 if (nextlo == 0 && nexthi == 0) {
-	    //eot = 1;
+	    eot = 1;
 	 }
 
 	 if (bufcnt <= 0) {
@@ -206,8 +206,8 @@ int DEBUG = 1; // DEBUG FLAG
       } // Loop on more buffer data.
 
       // Write final 0 byte.
-      if (DEBUG) printf("\n   Writing final byte: 0x%02x\n", rbuf[buf_ix]);
-      fwrite(&rbuf[buf_ix],1,1,fout);
+      //if (DEBUG) printf("\n   Writing final byte: 0x%02x\n", rbuf[buf_ix]);
+      //fwrite(&rbuf[buf_ix],1,1,fout);
 
       fclose(fout);
       printf("\nFile received and saved.\n");
