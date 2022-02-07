@@ -61,13 +61,15 @@ SAVELOAD SUBROUTINE
 	BNE	.wri2
 	STA	ENDHI		; Store end byte hi
 .wri2
-        LDY     #0
-        STA     (PTRLO),Y	; Store to BASIC mem
+
+	LDY	#0
+	STA	(PTRLO),Y
 
         LDA     BTMP1
         CMP	#$02
-	BCS	.inc16a		
+	BCS	.inc16a
         INC     BTMP1            ; Inc BTMP1 if less than 2
+	JMP	.lloop
 
 ; increment BASIC ptr
 .inc16a

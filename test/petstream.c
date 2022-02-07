@@ -242,33 +242,75 @@ int DEBUG = 1; // DEBUG FLAG
       fin = fopen("pet_basic.seq", "rb");
 
       char buffer[2];
+      char end_ptr[2];
       char eot[8] = "\0\0\0\0\0\0\0\0";
+      int sz = 0;
       int rcount = 0;
+      unsigned char sob_lo, sob_hi;
       unsigned int bcount = 0;
       if (fin) {
+
+         fseek(fin, 0L, SEEK_END);
+         sz = ftell(fin);
+	 rewind(fin);
+
+	 if (DEBUG) printf("File size: %d bytes.\n", sz);
+
 	 /* File was opened successfully. */
 
 	 /* Attempt to read */
 	 if (DEBUG) printf("   ");
-      while (rcount = fread(buffer, 1,1, fin) > 0) {
-	 if (bcount > 1) { // skip first two bytes
-             if (DEBUG) printf("0x%02x ", buffer[0]);
-             write(fd, &buffer[0], 1);
-             usleep(200000);
-	 }
-	 bcount++;
-      }
-      // kludge to flush with three null characters 
-      for (int i=0; i < 3; i++) {
-         write(fd, &eot[i], 1);
-	 usleep(200);
-      }
-      tcdrain(fd);
-      if (DEBUG) printf("\n\n");
-      fclose(fin);
-   }
+         while (rcount = fread(buffer, 1,1, fin) > 0) {
+	    if (bcount > 1) { // skip first two bytes
 
-   return *rp++;
+
+               if (bcount == 2) {
+
+		  // This is the first program byte. Send the end pointer now.
+		  int sob = (int)(((unsigned)sob_hi << 8) | sob_lo );
+		  sz -= 2;
+
+		  if (DEBUG) printf("\nProgram data size: %d\n", sz);
+		  if (DEBUG) printf("Start of BASIC: %d\n", sob);
+
+                  sz += sob; // Add program data size to SOB for End Pointer Address.
+
+                  unsigned char lsb = (unsigned)sz & 0xff; // mask the lower 8 bits
+                  unsigned char msb = (unsigned)sz >> 8;   // shift the higher 8 bits
+         
+                  if (DEBUG) printf("Sending: 0x%02x 0x%02x ", lsb, msb);
+         
+                  end_ptr[0] = lsb;
+                  end_ptr[1] = msb;
+                  write(fd, &end_ptr[0], 1);
+                  write(fd, &end_ptr[1], 1);
+                  usleep(200000);
+
+	       }
+
+               if (DEBUG) printf("0x%02x ", buffer[0]);
+               write(fd, &buffer[0], 1);
+               usleep(200000);
+   	    } else {
+	       if (bcount == 0) {
+                  sob_lo = buffer[0];
+	       } else {
+		  sob_hi = buffer[0];
+	       }
+	    }
+	    bcount++;
+         }
+         // kludge to flush with three null characters 
+         for (int i=0; i < 3; i++) {
+            write(fd, &eot[i], 1);
+            usleep(200);
+         }
+         tcdrain(fd);
+         if (DEBUG) printf("\n\n");
+         fclose(fin);
+      }
+
+      return *rp++;
 }
 
 
