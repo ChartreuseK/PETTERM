@@ -70,7 +70,7 @@ BAS1_VECT_BRK  EQU	$0216	; 216/217 - BRK vector
     IFCONST HIMEM
         IFCONST MEM8K
 MYORG		EQU	$0D48 ; SYS 3400
-MYRORG		EQU	$1F39
+MYRORG		EQU	$1F3F
         ENDIF
         IFCONST MEM16K
 MYORG           EQU     $2000 ; SYS 8192
@@ -81,7 +81,7 @@ MYORG           EQU     $6000 ; SYS 24576
 MYRORG          EQU     $733C
         ENDIF
     ELSE
-MYORG           EQU     $0C80 ; SYS 3200
+MYORG           EQU     $0D48 ; SYS 3400
 MYRORG          EQU     $1F3F
     ENDIF
 
