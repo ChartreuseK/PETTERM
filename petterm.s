@@ -183,9 +183,10 @@
 ;-----------------------------------------------------------------------
 ; Start of loaded data
 	SEG	CODE
+
+    IFNCONST HIMEM
 	ORG	SOB
 
-	;JMP	INIT		; Skip BASIC loader -APW
 ;-----------------------------------------------------------------------
 ; Simple Basic 'Loader' - BASIC Statement to jump into our program
 BLDR
@@ -203,6 +204,7 @@ BLDR
 BLDR_ENDL
 	DC.W $0		; LINK (End of program)
 ;-----------------------------------------------------------------------
+    ENDIF
 
 	ORG MYORG
 ;-----------------------------------------------------------------------
