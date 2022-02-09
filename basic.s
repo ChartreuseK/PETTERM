@@ -153,20 +153,6 @@ SAVELOAD SUBROUTINE
 
 .scont
 	JSR	CLRSCR
-.fsend	
-        LDX     FNAMER
-        CPX     FNAMEW
-        BEQ     .dsend		; Filename has been sent
-
-        ; Handle new byte
-        LDA     FNAME,X         ; New character
-        TAX                     ; Save
-        INC     FNAMER          ; Acknowledge byte by incrementing 
-        TXA
-
-	;JSR	SENDCH
-	JMP	.fsend		; Filename loop
-
 .dsend				; Send data
 
 	LDX	#0
@@ -175,12 +161,13 @@ SAVELOAD SUBROUTINE
 	STX	PTRLO
 	LDY	#>SOB
 	STY	PTRHI
-.sloop				; Save loop
+
+; Begin Saving
 	LDX	BTMP1
 	LDY	#0
 	LDA	(PTRLO),Y
 	CPX	#0
-	BNE	.read1
+	BNE	.sloop
 ; save start
 .bsstart
 	STA	ENDLO		; Store end lo byte
@@ -200,6 +187,26 @@ SAVELOAD SUBROUTINE
         JSR     SENDCH
 	LDA	#$45		; E
         JSR     SENDCH
+	LDA	#0
+	JSR	SENDCH
+
+.fsend
+        LDX     FNAMER
+        CPX     FNAMEW
+        BEQ     .bsgo           ; Filename has been sent
+
+        ; Handle new byte
+        LDA     FNAME,X         ; New character
+        TAX                     ; Save
+        INC     FNAMER          ; Acknowledge byte by incrementing 
+        TXA
+
+        JSR    SENDCH
+        JMP     .fsend          ; Filename loop
+
+.bsgo
+	LDA	#0
+	JSR	SENDCH
 
 ; send SOB address
         LDA     #<SOB
@@ -209,8 +216,10 @@ SAVELOAD SUBROUTINE
 
 	LDA	ENDLO
 
-	LDX	BTMP1
-.read1	CPX	#$01
+.sloop	LDX	BTMP1
+        LDY     #0
+        LDA     (PTRLO),Y
+	CPX	#$01
 	BNE	.read2
 	STA	ENDHI		; store end hi byte
 

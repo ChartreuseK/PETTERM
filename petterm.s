@@ -104,28 +104,34 @@
 ;
 ;     The SAVE BASIC PROGRAM option will send the current in-memory BASIC program over the 
 ;      serial connection with a header of the following bytes:
-;         0x00 0x00 0x00 0x53 (S) 0x41 (A) 0x56 (V) 0x45 (E)
-;      followed immediately by two bytes giving the starting address of the BASIC program ($0401
-;      on the Commodore PET) and then finally the remainder of the BASIC program store in the
-;      Commodore's memory.
+;         0x00 0x00 0x00 0x53 (S) 0x41 (A) 0x56 (V) 0x45 (E) 0x00
+;      followed immediately by a program name entered in PETTERM terminated with a value of 0x00
+; 
+;      After the program name string will follow two bytes giving the starting address of the BASIC
+;      program ($0401 on the Commodore PET), and then finally the remainder of the BASIC program
+;      stored in the Commodore's memory.
 ;    
 ;     For example, let assume the following BASIC program is currenlty in memory:
 ;        10 PRINT"HI"
+;
+;     Let's also say the user enters a program name of "HELLO" when saving in PETTERM.
 ; 
-;     The SAVE BASIC PROGRAM option will send the following data over serial:
-;        0x00 0x00 0x00 0x53 0x41 0x56 0x45 0x01
-;        0x04 0x0b 0x04 0x0a 0x00 0x99 0x22 0x48
-;        0x49 0x22 0x00 0x00
+;     The SAVE BASIC PROGRAM option will then send the following data over serial:
+;
+;        0x00 0x00 0x00 0x53 0x41 0x56 0x45 0x00
+;        0x48 0x45 0x4c 0x4c 0x4f 0x00 0x01 0x04
+;        0x0b 0x04 0x0a 0x00 0x99 0x22 0x48 0x49
+;        0x22 0x00 0x00
 ;     
-;     This is the "000SAVE" header followed by entire contents of the BASIC program including
-;      the first two bytes denoting the starting address of $0401 (the start of BASIC on the
-;      PET), which would be the same bytes saved if this program were written to tape or disk.
+;     This is the "000SAVE0" header followed by the program name of "HELLO0". After that
+;      is the entire contents of the BASIC program, including the first two bytes denoting the
+;      starting address of $0401 (the start of BASIC on the PET), which would be the same bytes
+;      saved if this program were written to tape or disk.
 ;
 ;     The LOAD BASIC PROGRAM option will wait to receive data over the serial connection,
 ;      and then write each byte received to the start of BASIC address ($0401 on the PET)
 ;      until all bytes have been received and stored according to the two bytes that 
-;      specify the memory pointer to the next line of BASIC code (until the pointer of
-;      $0000 is reached which designates the end of program).
+;      specify the memory pointer to the final byte of the BASIC code.
 ;
 ;     For example, if the 10 PRINT"HI" program from above was loaded using this option,
 ;      then the following bytes would be written to the PET's memory starting at address
@@ -138,7 +144,9 @@
 ;      key.
 ;     
 ;     Note: The Makefile was modified to build versions of PETTERM that both include and
-;      do not include these new options.
+;      do not include these new options. The Makefile also now includes options to utilize
+;      higher memory portions of 8K, 16K, and 32K PET. These high memory versions omit
+;      the BASIC loader program, requiring the user to run the "SYS" command themselves.
 ;
 ;   - Included a POSIX C program and Makefile in the test folder than can be used for the
 ;     SAVE BASIC and LOAD BASIC options.
@@ -146,12 +154,13 @@
 ;     needed to support the LOAD BASIC PROGRAM option.
 ;
 ;     To support the EXIT option to return to BASIC, the memory locate of this program was
-;     shifted to starting address of $1000 (SYS 4096). The program extends from this address
-;     to memory below the beginning of screen memory of $8000, so this should function
-;     correctly on 8k PETs. To date this program has only been tested on a 32k PET.
+;     shifted to starting address of $0D48 (SYS 3200). The program extends from this address
+;     to memory below the beginning of top of 8K memory at $2000, so this should function
+;     correctly on 8k PETs.
 ;
-;     The starting address of $1000 also means that the current maximum size of the BASIC
-;     programs supported is 600 bytes.
+;     The starting address of $0D48 also means that the current maximum size of the BASIC
+;     programs supported is 2,375 bytes unless you use one of the "higher memory" versions
+;     (see more details regarding Makefile above).
 ;   
 ; Written for the DASM assembler
 ;----------------------------------------------------------------------- 
