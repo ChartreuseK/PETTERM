@@ -36,6 +36,7 @@
 ; we might be able to push a little bit.
 ;
 ; Hayden Kroepfl (Chartreuse) 2017-2020
+; Adam Whitney (K0FFY) 2022 - Added Exit and BASIC Save/Load Extension
 ;
 ; Changelog
 ; 0.2.0	
@@ -100,7 +101,11 @@
 ;     nethack (seems to work just fine)
 ;
 ; 0.6.0
-;   - Added menu options and support for sending or receiving BASIC programs. - Adam Whitney, K0FFY
+; 
+;   This version adds the option to Exit to BASIC and also SAVE/LOAD BASIC programs over serial.
+;   by Adam Whitney (K0FFY) - 2022
+;
+;   - Added menu options and support for sending or receiving BASIC programs.
 ;
 ;     The SAVE BASIC PROGRAM option will send the current in-memory BASIC program over the 
 ;      serial connection with a header of the following bytes:
@@ -148,6 +153,10 @@
 ;      higher memory portions of 8K, 16K, and 32K PET. These high memory versions omit
 ;      the BASIC loader program, requiring the user to run the "SYS" command themselves.
 ;
+;      Option MEM8K  : SYS 3400  : Max Size of BASIC Program is 2,375 bytes
+;      Option MEM16K : SYS 8192  : Max Size of BASIC Program is 7,167 bytes
+;      Option MEM32K : SYS 24576 : Max Size of BASIC Program is 23,551 bytes
+;
 ;   - Included a POSIX C program and Makefile in the test folder than can be used for the
 ;     SAVE BASIC and LOAD BASIC options.
 ;   - Added an EXIT option to allow the user to exit PETTERM and return to BASIC, which was
@@ -162,6 +171,7 @@
 ;     programs supported is 2,375 bytes unless you use one of the "higher memory" versions
 ;     (see more details regarding Makefile above).
 ;   
+;
 ; Written for the DASM assembler
 ;----------------------------------------------------------------------- 
 	PROCESSOR 6502
