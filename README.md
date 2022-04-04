@@ -5,7 +5,7 @@ including those running BASIC 1!**
 
 Written by Hayden Kroepfl (Chartreuse) 2017-2020
 
-BASIC Save/Load Options by Adam Whitney (K0FFY) 2022
+BASIC Exit and Save/Load Options by Adam Whitney (K0FFY) 2022
 
 ## Latest Updates
 
