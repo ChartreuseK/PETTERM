@@ -234,12 +234,12 @@ int DEBUG = 1; // DEBUG FLAG
 
 
    /* send a byte from intermediate buffer of serial terminal */
-   static unsigned char tx_pet(int fd)
+   static unsigned char tx_pet(int fd, char *filename)
    {
       FILE* fin;
 
-      if (DEBUG) printf("\n   Reading pet_basic.seq for loading...\n\n");
-      fin = fopen("pet_basic.seq", "rb");
+      if (DEBUG) printf("\n   Reading %s for loading...\n\n", filename);
+      fin = fopen(filename, "rb");
 
       char buffer[2];
       char end_ptr[2];
@@ -382,6 +382,7 @@ char * strupr(char * temp) {
 int main(int argc, char **argv)
 {
    char *portname = SERIALTERMINAL;
+   char *filename;
    int wlen;
    int rlen;
    unsigned char ibuf[64];
@@ -390,9 +391,11 @@ int main(int argc, char **argv)
    int fd;
 
    if (argc < 2) {
-      fprintf(stderr, "usage: %s <SAVE/LOAD>\n", argv[0]);
+      fprintf(stdout, "usage: %s <SAVE/LOAD> [file]\n", argv[0]);
       exit(1);
    }
+
+   filename = (char *)malloc(sizeof(char)*256);
 
    fd = open(portname, O_RDWR | O_NOCTTY | O_SYNC);
    if (fd < 0) {
@@ -415,7 +418,12 @@ int main(int argc, char **argv)
       // POC : Testing BASIC program SAVE/LOAD.
       strupr(argv[1]);
       if (strcmp(argv[1],"LOAD") == 0) {
-         p = tx_pet(fd);
+	 if (argc < 3) {
+            fprintf(stdout, "usage: %s LOAD <file>\n", argv[0]);
+            exit(1);
+	 }
+	 strcpy(filename, argv[2]);
+         p = tx_pet(fd, filename);
       } else if (strcmp(argv[1],"SAVE") == 0) {
 	 p = rx_pet(fd);
       } else {
