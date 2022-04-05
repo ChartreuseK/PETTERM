@@ -82,7 +82,7 @@ SAVEB	DS.B	1		; Save BASIC program flag
     IFCONST BASIC
 FNAMEW	DS.B	1		; File name write pointer
 FNAMER	DS.B	1		; File name read pointer
-FNAME	DS.B	1		; File name pointer
+FNAME	DS.B	16		; File name pointer
 ;BASICLO	DS.B	1		; SOB lo byte
 ;BASICHI	DS.B	1		; SOB hi byte
 ;BLENLO	DS.B	1		; BASIC len lo byte

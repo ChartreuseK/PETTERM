@@ -49,7 +49,9 @@ int DEBUG = 1; // DEBUG FLAG
       int curlo = 0, curhi = 0;
       int nextlo = 0, nexthi = 0;
 
-      fout = fopen("pet_basic.seq", "wb");
+      char *filename;
+      filename = (char *)malloc(sizeof(char)*256);
+      int filenameix = 0;
 
       bufcnt = read(fd, rbuf, BLEN);
 
@@ -90,101 +92,118 @@ int DEBUG = 1; // DEBUG FLAG
 	       exit(1);
 	    } 
 
-	    rbufptr += 4;
-	    buf_ix += 4;
+	    rbufptr += 5;
+	    buf_ix += 5;
 	    headflg = 2;
 
 	 }
 
-	 if (DEBUG) printf("\n   Writing pet_basic.seq from serial data...\n");
 	 for (int i = buf_ix; i < bufcnt; i++) {
 
-	    if (curlo == 0 && curhi == 0) {
-
-	       // Begin saving now.
-	       
-	       // Get and write SOB bytes (current pointer bytes) first.
-	       curlo = rbuf[buf_ix];
-	       curhi = rbuf[buf_ix+1];
-
-	       if (DEBUG) printf("\n   Writing: 0x%02x\n", rbuf[buf_ix]);
-               if (DEBUG) printf("\n   Writing: 0x%02x\n", rbuf[buf_ix+1]);
-	       fwrite(&rbuf[buf_ix],1,1,fout);
-               fwrite(&rbuf[buf_ix+1],1,1,fout);
-
-	       rbufptr += 2;
-	       buf_ix += 2;
-
-	       // Jump iterator 'i' by two.
-	       i += 2;
-
-               // Get and write next pointer.
-
-               nextlo = rbuf[buf_ix];
-               nexthi = rbuf[buf_ix+1];
-
-               if (DEBUG) printf("\n   Writing: 0x%02x\n", rbuf[buf_ix]);
-               if (DEBUG) printf("\n   Writing: 0x%02x\n", rbuf[buf_ix+1]);
-               fwrite(&rbuf[buf_ix],1,1,fout);
-               fwrite(&rbuf[buf_ix+1],1,1,fout);
-               rbufptr += 2;
-               buf_ix += 2;
-
-	       // Jump iterator 'i' by one.
-	       i++;
-
-	       // Increment pointer by 2.
-	       inc_pointer(&curlo, &curhi);
-               inc_pointer(&curlo, &curhi);
-
-	    } else {
-
-	       if (nextflg != 1 && curlo == nextlo && curhi == nexthi) {
-
-                  if (DEBUG) printf("\n   Ready to read the next line.\n");
-
-                  // Get and write next pointer.
-                  nextlo = rbuf[buf_ix];
-   
-                  if (DEBUG) printf("\n   Writing: 0x%02x\n", rbuf[buf_ix]);
-                  fwrite(&rbuf[buf_ix],1,1,fout);
-                  rbufptr += 1;
-                  buf_ix += 1;
-   
-                  inc_pointer(&curlo, &curhi);
-
-		  nextflg = 1;
-
-	       } else if (nextflg == 1) {
-  
-                  // Get and write next pointer.
-                  nexthi = rbuf[buf_ix];
-
-                  if (DEBUG) printf("\n   Writing: 0x%02x\n", rbuf[buf_ix]);
-                  fwrite(&rbuf[buf_ix],1,1,fout);
-                  rbufptr += 1;
-                  buf_ix += 1;
-
-                  inc_pointer(&curlo, &curhi);
-		  nextflg = 0;
- 
+	    if (headflg == 2) {
+	       if (rbuf[i] == 0) {
+	          headflg = 3;
+                  printf("Output filename: %s\n", filename);
+                  strcpy(filename, strcat(filename, ".prg"));
+                  fout = fopen(filename, "wb");
+                  if (DEBUG) printf("\n   Writing %s from serial data...\n", filename);
 	       } else {
-
-
-                  if (DEBUG) printf("\n   NextLo: 0x%02x\n", nextlo);
-                  if (DEBUG) printf("\n   NextHi: 0x%02x\n", nexthi);
-                  if (DEBUG) printf("\n   CurLo: 0x%02x\n", curlo);
-                  if (DEBUG) printf("\n   CurHi: 0x%02x\n", curhi);
-
-		  // Save next byte and increment pointer.
-                  if (DEBUG) printf("\n   Writing: 0x%02x\n", rbuf[buf_ix]);
-                  fwrite(&rbuf[buf_ix],1,1,fout);
+                  filename[filenameix++] = rbuf[i];
                   rbufptr += 1;
                   buf_ix += 1;
-                  inc_pointer(&curlo, &curhi);
-	       }
+	       } 
+               continue;	
+	    }
 
-	    } // Receiving and writing program.
+	    if (headflg == 3) {
+               if (curlo == 0 && curhi == 0) {
+         
+         	       // Begin saving now.
+         	       
+         	       // Get and write SOB bytes (current pointer bytes) first.
+         	       curlo = rbuf[buf_ix];
+         	       curhi = rbuf[buf_ix+1];
+         
+         	       if (DEBUG) printf("\n   Writing: 0x%02x\n", rbuf[buf_ix]);
+                        if (DEBUG) printf("\n   Writing: 0x%02x\n", rbuf[buf_ix+1]);
+         	       fwrite(&rbuf[buf_ix],1,1,fout);
+                        fwrite(&rbuf[buf_ix+1],1,1,fout);
+         
+         	       rbufptr += 2;
+         	       buf_ix += 2;
+         
+         	       // Jump iterator 'i' by two.
+         	       i += 2;
+         
+                        // Get and write next pointer.
+         
+                        nextlo = rbuf[buf_ix];
+                        nexthi = rbuf[buf_ix+1];
+         
+                        if (DEBUG) printf("\n   Writing: 0x%02x\n", rbuf[buf_ix]);
+                        if (DEBUG) printf("\n   Writing: 0x%02x\n", rbuf[buf_ix+1]);
+                        fwrite(&rbuf[buf_ix],1,1,fout);
+                        fwrite(&rbuf[buf_ix+1],1,1,fout);
+                        rbufptr += 2;
+                        buf_ix += 2;
+         
+         	       // Jump iterator 'i' by one.
+         	       i++;
+         
+         	       // Increment pointer by 2.
+         	       inc_pointer(&curlo, &curhi);
+                        inc_pointer(&curlo, &curhi);
+         
+               } else {
+         
+         	       if (nextflg != 1 && curlo == nextlo && curhi == nexthi) {
+         
+                           if (DEBUG) printf("\n   Ready to read the next line.\n");
+         
+                           // Get and write next pointer.
+                           nextlo = rbuf[buf_ix];
+            
+                           if (DEBUG) printf("\n   Writing: 0x%02x\n", rbuf[buf_ix]);
+                           fwrite(&rbuf[buf_ix],1,1,fout);
+                           rbufptr += 1;
+                           buf_ix += 1;
+            
+                           inc_pointer(&curlo, &curhi);
+         
+         		  nextflg = 1;
+         
+         	       } else if (nextflg == 1) {
+           
+                           // Get and write next pointer.
+                           nexthi = rbuf[buf_ix];
+         
+                           if (DEBUG) printf("\n   Writing: 0x%02x\n", rbuf[buf_ix]);
+                           fwrite(&rbuf[buf_ix],1,1,fout);
+                           rbufptr += 1;
+                           buf_ix += 1;
+         
+                           inc_pointer(&curlo, &curhi);
+         		  nextflg = 0;
+          
+         	       } else {
+         
+         
+                           if (DEBUG) printf("\n   NextLo: 0x%02x\n", nextlo);
+                           if (DEBUG) printf("\n   NextHi: 0x%02x\n", nexthi);
+                           if (DEBUG) printf("\n   CurLo: 0x%02x\n", curlo);
+                           if (DEBUG) printf("\n   CurHi: 0x%02x\n", curhi);
+         
+         		  // Save next byte and increment pointer.
+                           if (DEBUG) printf("\n   Writing: 0x%02x\n", rbuf[buf_ix]);
+                           fwrite(&rbuf[buf_ix],1,1,fout);
+                           rbufptr += 1;
+                           buf_ix += 1;
+                           inc_pointer(&curlo, &curhi);
+         	       }
+         
+               } // Receiving and writing program.
+
+	    } // if (headflg == 3)
 
 	 } // Looping current buffer.
 
@@ -212,8 +231,8 @@ int DEBUG = 1; // DEBUG FLAG
       fclose(fout);
       printf("\nFile received and saved.\n");
 
-      if (DEBUG) printf("\n   Reading pet_basic.seq for verification...\n\n");
-      fin = fopen("pet_basic.seq", "rb");
+      if (DEBUG) printf("\n   Reading %s for verification...\n\n", filename);
+      fin = fopen(filename, "rb");
 
       char buffer[1];
       int rcount = 0;

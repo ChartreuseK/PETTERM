@@ -153,6 +153,14 @@ SAVELOAD SUBROUTINE
 
 .scont
 	JSR	CLRSCR
+
+        LDX     #0
+        LDY     #0
+        JSR     GOTOXY
+
+        LDA     #<S_WAIT
+        LDY     #>S_WAIT
+        JSR     PRINTSTR
 .dsend				; Send data
 
 	LDX	#0
@@ -200,13 +208,13 @@ SAVELOAD SUBROUTINE
         TAX                     ; Save
         INC     FNAMER          ; Acknowledge byte by incrementing 
         TXA
-
         JSR    SENDCH
         JMP     .fsend          ; Filename loop
 
 .bsgo
 	LDA	#0
 	JSR	SENDCH
+	JMP	.savend		; APW DEBUG DEBUG DEBUG!!!!!!!!!!!!!!!!!!!!!
 
 ; send SOB address
         LDA     #<SOB
@@ -326,6 +334,9 @@ HEXOUT SUBROUTINE
 
 S_PROMPT
 	DC.B    "ENTER PROGRAM NAME: ",0
+
+S_WAIT
+        DC.B    "SENDING PROGRAM DATA... ",0
 
 S_DONE
 	DC.B	"SAVING DONE!",0
