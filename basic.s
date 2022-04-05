@@ -214,7 +214,6 @@ SAVELOAD SUBROUTINE
 .bsgo
 	LDA	#0
 	JSR	SENDCH
-	JMP	.savend		; APW DEBUG DEBUG DEBUG!!!!!!!!!!!!!!!!!!!!!
 
 ; send SOB address
         LDA     #<SOB
