@@ -271,7 +271,9 @@ SAVELOAD SUBROUTINE
         LDA     (PTRLO),Y
 .newlo
 
+	PHA
         JSR     SENDCH          ; send the byte
+	PLA
 
 	STA	ENDLO		; save the new ENDLO byte for the next line
 
