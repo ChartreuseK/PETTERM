@@ -103,6 +103,8 @@ int DEBUG = 1; // DEBUG FLAG
 	    if (headflg == 2) {
 	       if (rbuf[i] == 0) {
 	          headflg = 3;
+                  rbufptr += 1;
+                  buf_ix += 1;
                   printf("Output filename: %s\n", filename);
                   strcpy(filename, strcat(filename, ".prg"));
                   fout = fopen(filename, "wb");
@@ -123,11 +125,14 @@ int DEBUG = 1; // DEBUG FLAG
          	       // Get and write SOB bytes (current pointer bytes) first.
          	       curlo = rbuf[buf_ix];
          	       curhi = rbuf[buf_ix+1];
-         
+        
+                       if (DEBUG) printf("\n   Start CurLo: 0x%02x\n", rbuf[buf_ix]);
+                       if (DEBUG) printf("\n   Start CurHi: 0x%02x\n", rbuf[buf_ix+1]);
+ 
          	       if (DEBUG) printf("\n   Writing: 0x%02x\n", rbuf[buf_ix]);
-                        if (DEBUG) printf("\n   Writing: 0x%02x\n", rbuf[buf_ix+1]);
+                       if (DEBUG) printf("\n   Writing: 0x%02x\n", rbuf[buf_ix+1]);
          	       fwrite(&rbuf[buf_ix],1,1,fout);
-                        fwrite(&rbuf[buf_ix+1],1,1,fout);
+                       fwrite(&rbuf[buf_ix+1],1,1,fout);
          
          	       rbufptr += 2;
          	       buf_ix += 2;
