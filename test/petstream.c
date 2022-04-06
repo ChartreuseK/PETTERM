@@ -262,6 +262,7 @@ int DEBUG = 1; // DEBUG FLAG
    {
       FILE* fin;
 
+      printf("Sending program data...\n");
       if (DEBUG) printf("\n   Reading %s for loading...\n\n", filename);
       fin = fopen(filename, "rb");
 
@@ -285,6 +286,7 @@ int DEBUG = 1; // DEBUG FLAG
 	 /* Attempt to read */
 	 if (DEBUG) printf("   ");
          while (rcount = fread(buffer, 1,1, fin) > 0) {
+            if (DEBUG) printf("Byte Count: %d\n", bcount);
 	    if (bcount > 1) { // skip first two bytes
 
 
@@ -318,8 +320,10 @@ int DEBUG = 1; // DEBUG FLAG
    	    } else {
 	       if (bcount == 0) {
                   sob_lo = buffer[0];
+                  if (DEBUG) printf("Start of BASIC Lo: 0x%02x\n", sob_lo);
 	       } else {
 		  sob_hi = buffer[0];
+                  if (DEBUG) printf("Start of BASIC Hi: 0x%02x\n", sob_hi);
 	       }
 	    }
 	    bcount++;

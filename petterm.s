@@ -487,12 +487,74 @@ START	SUBROUTINE
 
 	JMP	.loop
 .done	
+	; We are about to exit to BASIC.
+	
+	; We have to make sure the system I/O controllers, vectors,
+	; and the BASIC enviroment is reset to a functional state.
+
+	; Reset the IRQ Vector
+
 	JSR 	RESETIRQ
+
+	; RESETVIA must be called first for initial VIA chip reset,
+	; and then KRESETIO resets both the PIA and VIA to an
+	; interactive state for the BASIC environment.
 
 	SEI
 	JSR	RESETVIA
 	JSR	KRESETIO
 	CLI
+
+	; Next, move the Start of Variables, Start of Arrays, and
+	; End of Arrays Location to the end of any BASIC programs
+	; now in memory. This is essential if we loaded a new
+	; BASIC program via PETTERM.
+
+	; Check SOB pointer location to determine if we are running 
+	; BASIC1 or BASIC2/4. If you don't find $0401 in the
+	; BASIC 1 SOB Pointer Location, then assume BASIC 2/4.
+
+	LDX	$007A
+	CPX	#$01
+	BNE	.done4
+	LDX	$007B
+	CPX	#$04
+	BNE	.done4
+
+	; We found $0401 in $7A/$7B, so assume we're running BASIC 1.
+
+	; Load the current End of Basic Location
+	LDX	BAS1_EOB	; Load End of Basic Location
+
+	; Set the new SOV, SOA, and EOA values.
+	STX	BAS1_SOV	; Set New Start of Variables
+	STX	BAS1_SOA	; Set New Start of Arrays
+	STX	BAS1_EOA	; Set New End of Arrays
+
+	; As most will be running BASIC 2/4 and also the SOV, SOA,
+	; and EOA pointers for BASIC 2/4 are within the Input Buffer
+	; memory for BASIC 1, it is safest to go ahead and set
+	; the new SOV, SOA, and EOA values there too.
+
+        ; Load the current End of Basic Location from the BASIC4 address.
+        LDX     BAS4_EOB        ; Load End of Basic Location
+
+        ; Set the new SOV, SOA, and EOA values.
+        STX     BAS4_SOV        ; Set New Start of Variables
+        STX     BAS4_SOA        ; Set New Start of Arrays
+        STX     BAS4_EOA        ; Set New End of Arrays
+	JMP	.donedone
+.done4
+        ; Load the current End of Basic Location
+        LDX     BAS4_EOB        ; Load End of Basic Location
+
+        ; Set the new SOV, SOA, and EOA values.
+        STX     BAS4_SOV        ; Set New Start of Variables
+        STX     BAS4_SOA        ; Set New Start of Arrays
+        STX     BAS4_EOA        ; Set New End of Arrays
+.donedone
+
+	; Restore the Stack Pointer to the saved value.
 
         LDX	SP		; Retrieve initial start of stack
         TXS			; Set stack pointer to top of stack
