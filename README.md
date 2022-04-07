@@ -5,7 +5,7 @@ including those running BASIC 1!**
 
 Written by Hayden Kroepfl (Chartreuse) 2017-2020
 
-BASIC Exit and Save/Load Options by Adam Whitney (K0FFY) 2022
+Added Capabilities for BASIC Save/Load by Adam Whitney (K0FFY) 2022
 
 ## Latest Updates
 
@@ -13,7 +13,7 @@ PETTERM can now handle 2400 baud, along with much improved ANSI terminal compati
 
 Requires 8kB of RAM. (For 4kB PET's please use 0.4.0 version or prior for now.)
 
-Support to Load and Save BASIC programs over the serial connection.
+Capability to Load and Save BASIC programs over the serial connection.
 
 ## Features
 
@@ -56,14 +56,31 @@ This change is required for all baud rates in this version.
 
 ## Files
 
+Default:
+
+- petterm - 40 column PETs with graphics keyboard and BASIC save/load capability
+
+All:
+
 - petterm40G - 40 column PETs with graphics keyboard (eg 2001, some 4032)
 - petterm40B - 40 column PETs with buisness keyboard
 - petterm80G - 80 column PETs with graphics keyboard
 - petterm80B - 80 column PETs with buisness keyboard
-- pettermb40G - 40 column PETs with graphics keyboard, BASIC save/load options
-- pettermb40B - 40 column PETs with buisness keyboard, BASIC save/load options
-- pettermb80G - 80 column PETs with graphics keyboard, BASIC save/load options
-- pettermb80B - 80 column PETs with buisness keyboard, BASIC save/load options
+
+Basic:
+
+- petterm8K_40G.prg - 40 column PETs with graphics keyboard, BASIC save/load, higher memory version (SYS 3400)
+- petterm8K_80G.prg - 80 column PETs with graphics keyboard, BASIC save/load, higher memory version (SYS 3400)
+- petterm8K_40B.prg - 40 column PETs with graphics keyboard, BASIC save/load, higher memory version (SYS 3400)
+- petterm8K_80B.prg - 80 column PETs with graphics keyboard, BASIC save/load, higher memory version (SYS 3400)
+- petterm16K_40G.prg - 40 column PETs with graphics keyboard, BASIC save/load, higher memory version (SYS 8192)
+- petterm16K_80G.prg - 80 column PETs with graphics keyboard, BASIC save/load, higher memory version (SYS 8192)
+- petterm16K_40B.prg - 40 column PETs with graphics keyboard, BASIC save/load, higher memory version (SYS 8192)
+- petterm16K_80B.prg - 80 column PETs with graphics keyboard, BASIC save/load, higher memory version (SYS 8192)
+- petterm32K_40G.prg - 40 column PETs with graphics keyboard, BASIC save/load, higher memory version (SYS 24576)
+- petterm32K_80G.prg - 80 column PETs with graphics keyboard, BASIC save/load, higher memory version (SYS 24576)
+- petterm32K_40B.prg - 40 column PETs with graphics keyboard, BASIC save/load, higher memory version (SYS 24576)
+- petterm32K_80B.prg - 80 column PETs with graphics keyboard, BASIC save/load, higher memory version (SYS 24576)
 
 PRG files are the native programs, can be added to a tape or disk image
 
