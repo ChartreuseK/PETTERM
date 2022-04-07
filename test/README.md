@@ -2,6 +2,8 @@
 
 A POSIX C test program for the BASIC Save/Load capabilities of PETTERM.
 
+Currently set to use serial setting: 1200 8N1.
+
 # COMPILE
 
 Use one of the following commands:
