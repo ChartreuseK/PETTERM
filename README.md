@@ -22,6 +22,7 @@ Capability to Load and Save BASIC programs over the serial connection.
 - Works on all versions of BASIC including the oldest PET 2001s with BASIC 1.
 - Can work with as low as 8kB of RAM.
 - Requires only a simple two wire serial interface.
+- BASIC programs can be loaded or saved via serial using the 'petser' companion program.
 
 ## Usage
 
