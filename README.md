@@ -53,6 +53,20 @@ Don't forget the **ground** connection to either pin N or Pin 1
 If coming from a version prior to 0.4.0, a connection between pin C and B of the user-port is required. Adapters meant for VIC-20 or C64 use should already have this present.
 This change is required for all baud rates in this version.
 
+Commodore PET - Serial Hardware Signals and Levels
+
+    TTL(0V - 5V)                  RS-232 (-13V - 13V)
+
+                3-5.5V DC Power
+     ______       |     _________             ________
+    |      |      |--- |   MAX   |           |        |
+    |      |B\         |L  3232 R|           |        |
+    | PET  |  |--R1OUT-|O       S|--T1OUT---2| RS-232 |
+    | User |C/         |G       2|--R1OUT---3| Serial |
+    | Port |M----T1OUT-|I       3|           |  DB9   |
+    |      |           |C       2|           |        |
+    |______|1-----GND--|_________|--GND-----5|________|
+
 **Warning:** Connections to the PET user port are RS-232 TTL level signals (0V to +5V). Standard RS-232 serial level signals are -13V to +13V (or more). Connecting standard RS-232 level signals to your PET's user port without an RS-232 to TTL interface will damage your computer and make you sad. (See this [SparkFun explanation](https://www.sparkfun.com/tutorials/215) for more details.)
 
 ## Files
