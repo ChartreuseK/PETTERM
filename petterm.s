@@ -531,6 +531,12 @@ START	SUBROUTINE
 	STX	BAS1_SOA	; Set New Start of Arrays
 	STX	BAS1_EOA	; Set New End of Arrays
 
+        LDX	BAS1_EOB+1	; Load End of Basic Location
+
+        STX	BAS1_SOV+1	; Set New Start of Variables
+        STX	BAS1_SOA+1	; Set New Start of Arrays
+        STX	BAS1_EOA+1	; Set New End of Arrays
+
 .done4
 	; As most will be running BASIC 2/4 and also the SOV, SOA,
 	; and EOA pointers for BASIC 2/4 are within the Input Buffer
@@ -545,6 +551,12 @@ START	SUBROUTINE
         STX     BAS4_SOV        ; Set New Start of Variables
         STX     BAS4_SOA        ; Set New Start of Arrays
         STX     BAS4_EOA        ; Set New End of Arrays
+
+	LDX	BAS4_EOB+1
+
+	STX	BAS4_SOV+1
+	STX	BAS4_SOA+1
+	STX	BAS4_EOA+1
 
 	; Restore the Stack Pointer to the saved value.
 
