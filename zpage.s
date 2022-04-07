@@ -90,6 +90,7 @@ FNAME	DS.B	16		; File name pointer
 BTMP1	DS.B	1		; BASIC temp var
 ENDLO	DS.B	1		; BASIC end lo byte
 ENDHI	DS.B	1		; BASIC end hi byte
+EOB	DS.B	2		; Pointer to End of BASIC for loaded program
     ENDIF
 IRQB1LO DS.B    1               ; Hardware interrupt lo byte for BASIC 1
 IRQB1HI DS.B    1               ; Hardware interrupt hi byte for BASIC 1

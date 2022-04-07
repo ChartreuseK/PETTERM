@@ -86,37 +86,12 @@ SAVELOAD SUBROUTINE
 	BNE	.lloop		; keep reading
 
 ; end of BASIC LOAD code
-
-        ; Check SOB pointer location to determine if we are running 
-        ; BASIC1 or BASIC2/4. If you don't find $0401 in the
-        ; BASIC 1 SOB Pointer Location, then assume BASIC 2/4.
-
-        LDX     $007A
-        CPX     #$01
-        BNE     .ldone
-        LDX     $007B
-        CPX     #$04
-        BNE     .ldone
-
-        ; We found $0401 in $7A/$7B, so assume we're running BASIC 1.
-
-        ; Set the current End of Basic Location
-	LDX	ENDLO
-        STX     BAS1_EOB
-        LDX     ENDHI
-        STX     BAS1_EOB+1
 .ldone
-
-        ; As most will be running BASIC 2/4 and also the EOB pointer
-        ; for BASIC 2/4 is within the Input Buffer memory for BASIC 1,
-        ; it is safest to go ahead and set the new EOB value there
-	; regardless of detected BASIC version.
-
-        ; Set the current End of Basic Location
+        ; Save the current End of Basic Location
         LDX     ENDLO
-        STX     BAS4_EOB
+        STX     EOB
         LDX     ENDHI
-        STX     BAS4_EOB+1
+        STX     EOB+1
 
         LDA     #<L_DONE
         LDY     #>L_DONE

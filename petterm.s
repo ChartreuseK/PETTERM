@@ -505,6 +505,8 @@ START	SUBROUTINE
 	JSR	KRESETIO
 	CLI
 
+    IFCONST BASIC
+
 	; Next, move the Start of Variables, Start of Arrays, and
 	; End of Arrays Location to the end of any BASIC programs
 	; now in memory. This is essential if we loaded a new
@@ -524,14 +526,14 @@ START	SUBROUTINE
 	; We found $0401 in $7A/$7B, so assume we're running BASIC 1.
 
 	; Load the current End of Basic Location
-	LDX	BAS1_EOB	; Load End of Basic Location
+	LDX	EOB		; Load End of Basic Location
 
 	; Set the new SOV, SOA, and EOA values.
 	STX	BAS1_SOV	; Set New Start of Variables
 	STX	BAS1_SOA	; Set New Start of Arrays
 	STX	BAS1_EOA	; Set New End of Arrays
 
-        LDX	BAS1_EOB+1	; Load End of Basic Location
+        LDX	EOB+1
 
         STX	BAS1_SOV+1	; Set New Start of Variables
         STX	BAS1_SOA+1	; Set New Start of Arrays
@@ -544,19 +546,21 @@ START	SUBROUTINE
 	; the new SOV, SOA, and EOA values there regardless of detected
 	; BASIC version.
 
-        ; Load the current End of Basic Location from the BASIC4 address.
-        LDX     BAS4_EOB        ; Load End of Basic Location
+        ; Load the current End of Basic Location
+        LDX     EOB        ; Load End of Basic Location
 
         ; Set the new SOV, SOA, and EOA values.
         STX     BAS4_SOV        ; Set New Start of Variables
         STX     BAS4_SOA        ; Set New Start of Arrays
         STX     BAS4_EOA        ; Set New End of Arrays
 
-	LDX	BAS4_EOB+1
+	LDX	EOB+1
 
 	STX	BAS4_SOV+1
 	STX	BAS4_SOA+1
 	STX	BAS4_EOA+1
+
+    ENDIF ; IFCONST BASIC
 
 	; Restore the Stack Pointer to the saved value.
 

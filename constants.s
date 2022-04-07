@@ -59,7 +59,6 @@ SCRBTML	   EQU  SCRMEM+(SCRCOL*(SCRROW-1)) ; Start of last row
 ; Also make sure our ZP allocations don't overwrite
 BAS4_VECT_IRQ	EQU	$0090	; 90/91 - Hardware interrupt vector
 BAS4_VECT_BRK	EQU	$0092	; 92/93 - BRK vector
-BAS4_EOB	EQU	$0036   ; 36/37	- Current BASIC Line Ptr
 BAS4_SOV	EQU	$002A	; 2A/2B	- Start of Variables Ptr
 BAS4_SOA	EQU	$002C	; 2C/2D	- Start of Arrays Ptr
 BAS4_EOA	EQU	$002E	; 2E/2F - End of Arrays Ptr
@@ -69,7 +68,6 @@ BAS4_EOA	EQU	$002E	; 2E/2F - End of Arrays Ptr
 ; This is presumably for a BASIC 1.0 machine!
 BAS1_VECT_IRQ  EQU	$0219	; 219/220 - Interrupt vector
 BAS1_VECT_BRK  EQU	$0216	; 216/217 - BRK vector
-BAS1_EOB        EQU     $0088   ; 88/89 - Current BASIC Line Ptr
 BAS1_SOV        EQU     $007C   ; 7C/7D - Start of Variables Ptr
 BAS1_SOA        EQU     $007E   ; 7E/7F - Start of Arrays Ptr
 BAS1_EOA        EQU     $0080   ; 80/81 - End of Arrays Ptr
