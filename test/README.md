@@ -1,24 +1,24 @@
 # OVERVIEW
 
-A test program for the BASIC Save/Load functionality of PETTERM.
+A test program for the BASIC Save/Load capabilities of PETTERM.
 
 # COMPILE
 
-` cc -DDISPLAY_STRING petstream.c -o petstream`
+` cc -DDISPLAY_STRING petser.c -o petser`
 
 # USAGE
 
-` petstream SAVE`
+` petser SAVE`
 
-This will wait for a BASIC program to be received over the serial port, and then save a pet_basic.seq file to disk.
+This will wait for a BASIC program to be received over the serial port, and then save it to disk with the program name provided in PETTERM.
 
-` petstream LOAD`
+` petser LOAD myprogram.prg`
 
-This will send the pet_basic.seq file over the serial port.
+This will send the specified program file over the serial port to PETTERM.
 
 # SAMPLE DATA
 
-The pet_basic.seq file included here is one-line BASIC program comprised of the following 10 bytes:
+The pet_basic.prg file included here is one-line BASIC program comprised of the following 10 bytes:
 
 0104 0b04 0a00 9922 4849 2200
 
