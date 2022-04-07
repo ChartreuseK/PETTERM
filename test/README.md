@@ -1,8 +1,12 @@
 # OVERVIEW
 
-A test program for the BASIC Save/Load capabilities of PETTERM.
+A POSIX C test program for the BASIC Save/Load capabilities of PETTERM.
 
 # COMPILE
+
+Use one of the following commands:
+
+` make`
 
 ` cc -DDISPLAY_STRING petser.c -o petser`
 
