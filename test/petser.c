@@ -1,3 +1,11 @@
+/* petser
+ * 
+ * Adam Whitney (K0FFY) - 2022
+ *
+ * Serial program that will communicate with PETTERM to provide the file server
+ * for SAVE and LOAD operations from the Commodore PET.
+ *
+ */
 #define SERIALTERMINAL      "/dev/ttyUSB0"
 #include <errno.h>
 #include <fcntl.h> 
@@ -15,8 +23,7 @@ unsigned char rbuf[BLEN];
 unsigned char *rp = &rbuf[BLEN];
 int bufcnt = 0;
 
-int DEBUG = 1; // DEBUG FLAG
-
+int DEBUG = 0; // DEBUG FLAG
 
 /* increment two-byte memory pointer */
    void inc_pointer(int *lo, int *hi) {
@@ -53,9 +60,14 @@ int DEBUG = 1; // DEBUG FLAG
       filename = (char *)malloc(sizeof(char)*256);
       int filenameix = 0;
 
+      printf("Waiting for program data...\n");
+
       bufcnt = read(fd, rbuf, BLEN);
 
+      printf("Receiving program data...\n");
+
       while (eot == 0 && bufcnt > 0) {
+
 	 buf_ix = 0;
 	 /* buffer needs refill */
 	 rbufptr = rbuf;
@@ -82,10 +94,10 @@ int DEBUG = 1; // DEBUG FLAG
 	    buf_ix += 3;
 
 	    if (strncmp(op_save, rbuf, 4)) {
-	       printf("\nSAVE operation requested.\n");
+	       if (DEBUG) printf("\nSAVE operation requested.\n");
 	       saveflg = 1;
 	    } else if (strncmp(op_load, rbuf, 4)) {
-	       printf("\nLOAD operation requested.\n");
+	       if (DEBUG) printf("\nLOAD operation requested.\n");
 	       loadflg = 1;
 	    } else {
 	       printf("ERROR: Invalid operation requested!\n\n");
@@ -105,7 +117,7 @@ int DEBUG = 1; // DEBUG FLAG
 	          headflg = 3;
                   rbufptr += 1;
                   buf_ix += 1;
-                  printf("Output filename: %s\n", filename);
+                  if (DEBUG) printf("Output filename: %s\n", filename);
                   strcpy(filename, strcat(filename, ".prg"));
                   fout = fopen(filename, "wb");
                   if (DEBUG) printf("\n   Writing %s from serial data...\n", filename);
@@ -234,24 +246,27 @@ int DEBUG = 1; // DEBUG FLAG
       //fwrite(&rbuf[buf_ix],1,1,fout);
 
       fclose(fout);
-      printf("\nFile received and saved.\n");
 
-      if (DEBUG) printf("\n   Reading %s for verification...\n\n", filename);
-      fin = fopen(filename, "rb");
+      if (DEBUG) {
+         if (DEBUG) printf("\n   Reading %s for verification...\n\n", filename);
+         fin = fopen(filename, "rb");
 
-      char buffer[1];
-      int rcount = 0;
-      if (fin) {
-	 /* File was opened successfully. */
-
-	 /* Attempt to read */
-	 if (DEBUG) printf("   ");
-	 while (rcount = fread(buffer, 1,1, fin) > 0) {
-	    if (DEBUG) printf("0x%02x ", buffer[0]);
-	 }
-	 if (DEBUG) printf("\n\n");
-	 fclose(fin);
+         char buffer[1];
+         int rcount = 0;
+         if (fin) {
+   	 /* File was opened successfully. */
+   
+   	 /* Attempt to read */
+   	 if (DEBUG) printf("   ");
+   	 while (rcount = fread(buffer, 1,1, fin) > 0) {
+   	    if (DEBUG) printf("0x%02x ", buffer[0]);
+   	 }
+   	 if (DEBUG) printf("\n\n");
+      	    fclose(fin);
+         }
       }
+
+      printf("\nFile %s received and saved.\n", filename);
 
       return *rp++;
    }
@@ -337,6 +352,7 @@ int DEBUG = 1; // DEBUG FLAG
          if (DEBUG) printf("\n\n");
          fclose(fin);
       }
+      printf("Done.\n");
 
       return *rp++;
 }
@@ -391,8 +407,6 @@ int set_interface_attribs(int fd, int speed, int canonical)
    }
    return 0;
 }
-
-
 
 char * strupr(char * temp) {
   char * name;
