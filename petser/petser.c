@@ -35,6 +35,21 @@ int DEBUG = 0; // DEBUG FLAG
       return;
    } 
 
+int mygetch ( void ) 
+{
+  int ch;
+  struct termios oldt, newt;
+  
+  tcgetattr ( STDIN_FILENO, &oldt );
+  newt = oldt;
+  newt.c_lflag &= ~( ICANON | ECHO );
+  tcsetattr ( STDIN_FILENO, TCSANOW, &newt );
+  ch = getchar();
+  tcsetattr ( STDIN_FILENO, TCSANOW, &oldt );
+  
+  return ch;
+}
+
 /* get a byte from intermediate buffer of serial terminal */
    static unsigned char rx_pet(int fd)
    {
@@ -276,6 +291,10 @@ int DEBUG = 0; // DEBUG FLAG
    static unsigned char tx_pet(int fd, char *filename)
    {
       FILE* fin;
+
+      printf("\nStart LOAD BASIC PROGRAM in PETTERM now. Press any key when ready. ");
+      mygetch();
+      printf("\n");
 
       printf("Sending program data...\n");
       if (DEBUG) printf("\n   Reading %s for loading...\n\n", filename);
