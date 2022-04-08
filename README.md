@@ -41,6 +41,9 @@ Can Load and Save BASIC programs over the serial connection.
     - Tab = Ctrl-I
     - Esc = Ctrl-[ (For Alt/Meta, send Esc then the key)
 - Terminal emulates ANSI escape codes (supports all required by ansi TERMCAP/TERMINFO)
+- Load/Save BASIC Program using 'petser':
+    -  petser SAVE
+    -  petser LOAD myprogram.prg 
 
 ## Hardware
 
