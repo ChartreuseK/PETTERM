@@ -5,7 +5,7 @@ including those running BASIC 1!**
 
 Written by Hayden Kroepfl (Chartreuse) 2017-2020
 
-Added Capabilities for BASIC Save/Load by Adam Whitney (K0FFY) 2022
+BASIC Save/Load extensions by Adam Whitney (K0FFY) 2022
 
 ## Latest Updates
 
@@ -13,7 +13,7 @@ PETTERM can now handle 2400 baud, along with much improved ANSI terminal compati
 
 Requires 8kB of RAM. (For 4kB PET's please use 0.4.0 version or prior for now.)
 
-Capability to Load and Save BASIC programs over the serial connection.
+Can Load and Save BASIC programs over the serial connection.
 
 ## Features
 
@@ -53,11 +53,11 @@ Don't forget the **ground** connection to either pin N or Pin 1
 If coming from a version prior to 0.4.0, a connection between pin C and B of the user-port is required. Adapters meant for VIC-20 or C64 use should already have this present.
 This change is required for all baud rates in this version.
 
-Commodore PET - Serial Hardware Signals and Levels
+Commodore PET - Serial Hardware Signals and Levels:
 
-    TTL(0V - 5V)                  RS-232 (-13V - 13V)
+    TTL(0V - +5V)                  RS-232 (-13V - +13V)
 
-                3-5.5V DC Power
+                3V-5.5V DC Power
      ______       |     _________             ________
     |      |      |--- |   MAX   |           |        |
     |      |B\         |L  3232 R|           |        |
@@ -73,29 +73,33 @@ Commodore PET - Serial Hardware Signals and Levels
 
 Default:
 
-- petterm - 40 column PETs with graphics keyboard and BASIC save/load capability
+- petterm - 40 column PETs with graphics keyboard, BASIC save/load extension
 
 All:
 
+The original PETTERM without the BASIC save/load extension
+
 - petterm40G - 40 column PETs with graphics keyboard (eg 2001, some 4032)
-- petterm40B - 40 column PETs with buisness keyboard
+- petterm40B - 40 column PETs with business keyboard
 - petterm80G - 80 column PETs with graphics keyboard
-- petterm80B - 80 column PETs with buisness keyboard
+- petterm80B - 80 column PETs with business keyboard
 
 Basic:
 
+The higher memory versions with the BASIC save/load extension
+
 - petterm8K_40G.prg - 40 column PETs with graphics keyboard, BASIC save/load, higher memory version (SYS 3400)
 - petterm8K_80G.prg - 80 column PETs with graphics keyboard, BASIC save/load, higher memory version (SYS 3400)
-- petterm8K_40B.prg - 40 column PETs with graphics keyboard, BASIC save/load, higher memory version (SYS 3400)
-- petterm8K_80B.prg - 80 column PETs with graphics keyboard, BASIC save/load, higher memory version (SYS 3400)
+- petterm8K_40B.prg - 40 column PETs with business keyboard, BASIC save/load, higher memory version (SYS 3400)
+- petterm8K_80B.prg - 80 column PETs with business keyboard, BASIC save/load, higher memory version (SYS 3400)
 - petterm16K_40G.prg - 40 column PETs with graphics keyboard, BASIC save/load, higher memory version (SYS 8192)
 - petterm16K_80G.prg - 80 column PETs with graphics keyboard, BASIC save/load, higher memory version (SYS 8192)
-- petterm16K_40B.prg - 40 column PETs with graphics keyboard, BASIC save/load, higher memory version (SYS 8192)
-- petterm16K_80B.prg - 80 column PETs with graphics keyboard, BASIC save/load, higher memory version (SYS 8192)
+- petterm16K_40B.prg - 40 column PETs with business keyboard, BASIC save/load, higher memory version (SYS 8192)
+- petterm16K_80B.prg - 80 column PETs with business keyboard, BASIC save/load, higher memory version (SYS 8192)
 - petterm32K_40G.prg - 40 column PETs with graphics keyboard, BASIC save/load, higher memory version (SYS 24576)
 - petterm32K_80G.prg - 80 column PETs with graphics keyboard, BASIC save/load, higher memory version (SYS 24576)
-- petterm32K_40B.prg - 40 column PETs with graphics keyboard, BASIC save/load, higher memory version (SYS 24576)
-- petterm32K_80B.prg - 80 column PETs with graphics keyboard, BASIC save/load, higher memory version (SYS 24576)
+- petterm32K_40B.prg - 40 column PETs with business keyboard, BASIC save/load, higher memory version (SYS 24576)
+- petterm32K_80B.prg - 80 column PETs with business keyboard, BASIC save/load, higher memory version (SYS 24576)
 
 PRG files are the native programs, can be added to a tape or disk image
 
