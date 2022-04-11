@@ -845,7 +845,7 @@ RESETIO SUBROUTINE
 ; Kernal Initialization Values in Sequence
 	LDA	#$7F 
 	STA	VIA_IER
-	LDX #$FF
+	LDX	#$FF
 	LDA	#$0F
 	STA	PIA1_PA
 	ASL
