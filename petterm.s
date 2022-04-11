@@ -1,6 +1,6 @@
 ;-----------------------------------------------------------------------
 ; PETTerm
-; Version 0.6.0
+; Version 0.6.1
 ;
 ; A bit-banged full duplex serial terminal for the PET 2001 computers,
 ; including those running BASIC 1. 
@@ -171,6 +171,13 @@
 ;     programs supported is 2,375 bytes unless you use one of the "higher memory" versions
 ;     (see more details regarding Makefile above).
 ;   
+; 0.6.1
+;
+;     Rewrote the RESETVIA and KRESETIO subroutines into a new and clean RESETIO subroutine,
+;     stripping down to only the essential VIA and PIA reset sequence and values.
+;
+;     Cleaned up the source code formatting for a consistent indentation using tabs.
+;
 ;
 ; Written for the DASM assembler
 ;----------------------------------------------------------------------- 
