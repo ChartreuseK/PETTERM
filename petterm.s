@@ -250,41 +250,31 @@ INIT	SUBROUTINE
 	LDA	#$03		; 1200 baud
 	STA	BAUD
 
-        ; Disable all PIA interrupt sources
-        LDA     PIA1_CRB
-        ;STA     PIA1B           ; Save PIA1_CRB init value
-        AND     #$FE            ; Disable interrupts (60hz retrace int?)
-        STA     PIA1_CRB        
-        LDA     PIA1_CRA
-        ;STA     PIA1A           ; Save PIA1_CRA init value
-        AND     #$FE
-        STA     PIA1_CRA        ; Disable interrupts
-        
-        LDA     PIA2_CRB
-        ;STA     PIA2B           ; Save PIA2_CRB init value
-        AND     #$FE            ; Disable interrupts (60hz retrace int?)
-        STA     PIA2_CRB        
-        LDA     PIA2_CRA
-        ;STA     PIA2A           ; Save PIA1_CRAB init value
-        AND     #$FE
-        STA     PIA2_CRA        ; Disable interrupts
+	; Disable all PIA interrupt sources
+	LDA	PIA1_CRB
+	AND	#$FE			; Disable interrupts (60hz retrace int?)
+	STA	PIA1_CRB
+	LDA	PIA1_CRA
+	AND	#$FE
+	STA	PIA1_CRA		; Disable interrupts
 
-        ; Save IRQ init value
-        LDA     BAS1_VECT_IRQ
-        STA     IRQB1LO         ; Save IRQ lo byte for BASIC 1
-        LDA     BAS1_VECT_IRQ+1
-        STA     IRQB1HI         ; Save IRQ hi byte for BASIC 1
-        LDA     BAS4_VECT_IRQ
-        STA     IRQB4LO         ; Save IRQ lo byte for BASIC 2/4
-        LDA     BAS4_VECT_IRQ+1
-        STA     IRQB4HI         ; Save IRQ hi byte for BASIC 2/4
+	LDA	PIA2_CRB
+	AND	#$FE			; Disable interrupts (60hz retrace int?)
+	STA	PIA2_CRB
+	LDA	PIA2_CRA
+	AND	#$FE
+	STA	PIA2_CRA		; Disable interrupts
 
-        ; Save PIA1 PA/PB init values
-        ;LDA     PIA1_PA
-        ;STA     PIA1PA
-        ;LDA     PIA1_PB
-        ;STA     PIA1PB
-	
+	; Save IRQ init value
+	LDA	BAS1_VECT_IRQ
+	STA	IRQB1LO			; Save IRQ lo byte for BASIC 1
+	LDA	BAS1_VECT_IRQ+1
+	STA	IRQB1HI			; Save IRQ hi byte for BASIC 1
+	LDA	BAS4_VECT_IRQ
+	STA	IRQB4LO			; Save IRQ lo byte for BASIC 2/4
+	LDA	BAS4_VECT_IRQ+1
+	STA	IRQB4HI			; Save IRQ hi byte for BASIC 2/4
+
 	; Install IRQ
 	LDA	#<IRQHDLR
 	LDX	#>IRQHDLR
@@ -496,13 +486,11 @@ START	SUBROUTINE
 
 	JSR 	RESETIRQ
 
-	; RESETVIA must be called first for initial VIA chip reset,
-	; and then KRESETIO resets both the PIA and VIA to an
-	; interactive state for the BASIC environment.
+	; RESETIO resets both the PIA and VIA to an interactive
+	; state for the BASIC environment.
 
 	SEI
-	JSR	RESETVIA
-	JSR	KRESETIO
+	JSR	RESETIO
 	CLI
 
     IFCONST BASIC
@@ -533,11 +521,11 @@ START	SUBROUTINE
 	STX	BAS1_SOA	; Set New Start of Arrays
 	STX	BAS1_EOA	; Set New End of Arrays
 
-        LDX	EOB+1
+	LDX	EOB+1
 
-        STX	BAS1_SOV+1	; Set New Start of Variables
-        STX	BAS1_SOA+1	; Set New Start of Arrays
-        STX	BAS1_EOA+1	; Set New End of Arrays
+	STX	BAS1_SOV+1	; Set New Start of Variables
+	STX	BAS1_SOA+1	; Set New Start of Arrays
+	STX	BAS1_EOA+1	; Set New End of Arrays
 
 .done4
 	; As most will be running BASIC 2/4 and also the SOV, SOA,
@@ -546,13 +534,13 @@ START	SUBROUTINE
 	; the new SOV, SOA, and EOA values there regardless of detected
 	; BASIC version.
 
-        ; Load the current End of Basic Location
-        LDX     EOB        ; Load End of Basic Location
+	; Load the current End of Basic Location
+	LDX	EOB			; Load End of Basic Location
 
-        ; Set the new SOV, SOA, and EOA values.
-        STX     BAS4_SOV        ; Set New Start of Variables
-        STX     BAS4_SOA        ; Set New Start of Arrays
-        STX     BAS4_EOA        ; Set New End of Arrays
+	; Set the new SOV, SOA, and EOA values.
+	STX	BAS4_SOV	; Set New Start of Variables
+	STX	BAS4_SOA	; Set New Start of Arrays
+	STX	BAS4_EOA	; Set New End of Arrays
 
 	LDX	EOB+1
 
@@ -564,8 +552,8 @@ START	SUBROUTINE
 
 	; Restore the Stack Pointer to the saved value.
 
-        LDX	SP		; Retrieve initial start of stack
-        TXS			; Set stack pointer to top of stack
+	LDX	SP		; Retrieve initial start of stack
+	TXS			; Set stack pointer to top of stack
 
 	RTS
 
@@ -594,7 +582,8 @@ START	SUBROUTINE
 ;-----------------------------------------------------------------------
 ;-- BASIC load and save code -------------------------------------------
 ;-----------------------------------------------------------------------
-        INCLUDE "basic.s"
+	INCLUDE "basic.s"
+
     ENDIF
 	
 
@@ -785,93 +774,103 @@ INITVIA SUBROUTINE
 ; Reset IRQ vector
 RESETIRQ SUBROUTINE
 
-        ; Disable interrupts
-        SEI
+	; Disable interrupts
+	SEI
 
 	; Check BASIC version.
-        LDX     $007A
-        CPX     #$01
-        BNE     .irqbas4
-        LDX     $007B
-        CPX     #$04
-        BNE     .irqbas4
+	LDX	$007A
+	CPX	#$01
+	BNE	.irqbas4
+	LDX	$007B
+	CPX	#$04
+	BNE	.irqbas4
 
 	; Found $0401 in Start of Basic Location for BASIC 1 
 
-        ; Restore IRQ vector init values
-        LDA     IRQB1LO
-        STA     BAS1_VECT_IRQ
-        LDA     IRQB1HI
-        STA     BAS1_VECT_IRQ+1
+	; Restore IRQ vector init values
+	LDA	IRQB1LO
+	STA	BAS1_VECT_IRQ
+	LDA	IRQB1HI
+	STA	BAS1_VECT_IRQ+1
 	JMP	.irqdone
 
 .irqbas4
 
 	; Otherwise, this must be running BASIC 2/4
 
-        ; Restore IRQ vector init values
-        LDA     IRQB4LO
-        STA     BAS4_VECT_IRQ
-        LDA     IRQB4HI
-        STA     BAS4_VECT_IRQ+1
+	; Restore IRQ vector init values
+	LDA	IRQB4LO
+	STA	BAS4_VECT_IRQ
+	LDA	IRQB4HI
+	STA	BAS4_VECT_IRQ+1
 .irqdone
-        ; Enable interrupts
-        CLI
+	; Enable interrupts
+	CLI
 
-        RTS
-
-;-----------------------------------------------------------------------
-; Reset VIA and userport
-; http://www.zimmers.net/cbmpics/cbm/PETx/petmem.txt
-RESETVIA SUBROUTINE
-        LDA     #$00
-        STA     VIA_DDRA
-        STA     VIA_IFR
-        LDA     #$1E
-        STA     VIA_TIM1L
-        LDA     #$FF
-        STA     VIA_PORTAH
-        STA     VIA_PORTA
-        STA     VIA_TIM1HL
-        LDA     #$0C
-        STA     VIA_PCR
-        RTS
+	RTS
 
 ;-----------------------------------------------------------------------
 ; Reset VIA and PIA according to how the PET kernel does it.
-; http://www.zimmers.net/anonftp/pub/cbm/src/pet/pet_rom4_disassembly.txt
-KRESETIO SUBROUTINE
-.iE60F	LDA	#$7F
+;
+; References:
+;   http://www.zimmers.net/cbmpics/cbm/PETx/petmem.txt
+;   http://www.zimmers.net/anonftp/pub/cbm/src/pet/pet_rom4_disassembly.txt
+;    - Reference kernal location: $E60F - $E6D0
+;
+RESETIO SUBROUTINE
+
+; Startup Values for VIA
+    LDA	#$00
+    STA	VIA_DDRA
+    STA	VIA_IFR
+
+	LDA	#$1E
+    STA	VIA_TIM1L
+
+	LDA	#$FF
+    STA	VIA_PORTAH
+    STA	VIA_PORTA
+    STA	VIA_TIM1HL
+
+	LDA	#$0C
+    STA	VIA_PCR
+
+; Kernal Initialization Values in Sequence
+	LDA	#$7F 
 	STA	VIA_IER
- 	LDX #$6D
-.iE61C	DEX
- 	BPL .iE61C
+	LDX #$FF
 	LDA	#$0F
-	STA	PIA1_PA		; PIA 1
+	STA	PIA1_PA
 	ASL
-	STA	VIA_PORTB	; VIA
+	STA	VIA_PORTB
 	STA	VIA_DDRB
 	STX	PIA2_PB
 	STX	VIA_TIM1H
+
 	LDA	#$3D
 	STA	PIA1_CRB
 	BIT	PIA1_PB
+
 	LDA	#$3C
 	STA	PIA2_CRA
 	STA	PIA2_CRB
 	STA	PIA1_CRA
 	STX	PIA2_PB
+
 	LDA	#$0E
 	STA	VIA_IER
+
 	LDA	#$10
 	STA	VIA_ACR
+
 	LDA	#$0F
 	STA	VIA_SR
-	LDX	#$07
-.iE6B7	LDA	$E74D,X	; Timer 2 LO Values			DATA
-	STA	VIA_TIM2L
-.sE6D0	RTS
 
+	LDX	#$07
+	LDA	$E74D,X		; Timer 2 LO Values DATA
+	STA	VIA_TIM2L
+
+	RTS
 
 ;----------------------------------------------------------------------------
 

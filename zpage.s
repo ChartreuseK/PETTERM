@@ -83,18 +83,18 @@ SAVEB	DS.B	1		; Save BASIC program flag
 FNAMEW	DS.B	1		; File name write pointer
 FNAMER	DS.B	1		; File name read pointer
 FNAME	DS.B	16		; File name pointer
-;BASICLO	DS.B	1		; SOB lo byte
-;BASICHI	DS.B	1		; SOB hi byte
+;BASICLO	DS.B	1	; SOB lo byte
+;BASICHI	DS.B	1	; SOB hi byte
 ;BLENLO	DS.B	1		; BASIC len lo byte
 ;BLENHI	DS.B	1		; BASIC len hi byte
 BTMP1	DS.B	1		; BASIC temp var
 ENDLO	DS.B	1		; BASIC end lo byte
 ENDHI	DS.B	1		; BASIC end hi byte
-EOB	DS.B	2		; Pointer to End of BASIC for loaded program
+EOB	DS.B	2			; Pointer to End of BASIC for loaded program
     ENDIF
-IRQB1LO DS.B    1               ; Hardware interrupt lo byte for BASIC 1
-IRQB1HI DS.B    1               ; Hardware interrupt hi byte for BASIC 1
-IRQB4LO DS.B    1               ; Hardware interrupt lo byte for BASIC 2/4
+IRQB1LO DS.B    1		; Hardware interrupt lo byte for BASIC 1
+IRQB1HI DS.B    1		; Hardware interrupt hi byte for BASIC 1
+IRQB4LO DS.B    1		; Hardware interrupt lo byte for BASIC 2/4
 IRQB4HI	DS.B	1		; Hardware interrupt hi byte for BASIC 2/4
 SP	DS.B	1
 EXITFLG	DS.B	1		; Exit flag

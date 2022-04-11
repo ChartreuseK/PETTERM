@@ -12,42 +12,42 @@ SAVELOAD SUBROUTINE
 
 .bload
 	LDA	#0
-	STA	LOADB		; Clear BASIC load flag
-	STA	BTMP1		; Clear BTMP1 byte count
+	STA	LOADB	; Clear BASIC load flag
+	STA	BTMP1	; Clear BTMP1 byte count
 
-        JSR     CLRSCR
+	JSR	CLRSCR
 
-        LDX     #0
-        LDY     #0
-        JSR     GOTOXY
+	LDX	#0
+	LDY	#0
+	JSR	GOTOXY
 
-        LDA     #<L_WAIT
-        LDY     #>L_WAIT
-        JSR     PRINTSTR
+	LDA	#<L_WAIT
+	LDY	#>L_WAIT
+	JSR	PRINTSTR
 
-        LDX     #0
-        LDY     #2#
-        JSR     GOTOXY
+	LDX	#0
+	LDY	#2#
+	JSR	GOTOXY
 
-        LDX     #<SOB
-        STX     PTRLO
-        LDY     #>SOB
-        STY     PTRHI		
+	LDX	#<SOB
+	STX	PTRLO
+	LDY	#>SOB
+	STY	PTRHI		
 	STY	ENDHI		; Init value
 
 .lloop				; Load loop
 
-        LDX     RXBUFR
-        CPX     RXBUFW
-        BEQ     .lnorx          ; Loop till we get a character in
-
-        ; Handle new byte
-        LDA     RXBUF,X         ; New character
-        TAX                     ; Save
-        INC     RXBUFR          ; Acknowledge byte by incrementing 
-        TXA
-
-	;TAX			; Debug print
+	LDX	RXBUFR
+	CPX	RXBUFW
+	BEQ	.lnorx          ; Loop till we get a character in
+	
+	; Handle new byte
+	LDA	RXBUF,X         ; New character
+	TAX                     ; Save
+	INC	RXBUFR          ; Acknowledge byte by incrementing 
+	TXA
+	
+	;TAX	; Debug print
 	;JSR	HEXOUT
 	;TXA
 
@@ -65,10 +65,10 @@ SAVELOAD SUBROUTINE
 	LDY	#0
 	STA	(PTRLO),Y
 
-        LDA     BTMP1
-        CMP	#$02
+	LDA	BTMP1
+	CMP	#$02
 	BCS	.inc16a
-        INC     BTMP1            ; Inc BTMP1 if less than 2
+	INC	BTMP1            ; Inc BTMP1 if less than 2
 	JMP	.lloop
 
 ; increment BASIC ptr
@@ -87,32 +87,32 @@ SAVELOAD SUBROUTINE
 
 ; end of BASIC LOAD code
 .ldone
-        ; Save the current End of Basic Location
-        LDX     ENDLO
-        STX     EOB
-        LDX     ENDHI
-        STX     EOB+1
-
-        LDA     #<L_DONE
-        LDY     #>L_DONE
-        JSR     PRINTSTR
+	; Save the current End of Basic Location
+	LDX	ENDLO
+	STX	EOB
+	LDX	ENDHI
+	STX	EOB+1
+	
+	LDA	#<L_DONE
+	LDY	#>L_DONE
+	JSR	PRINTSTR
 
 ; exit to menu
 .lmenu
-        RTS
+	RTS
 
 .lnorx
 	LDA	KBDNEW
 	BEQ	.lnokey
-        LDA     #$0
-        STA     KBDNEW
+	LDA	#$0
+	STA	KBDNEW
 
-        LDA     KBDBYTE
-        BMI     .ltrmkey        ; Key's above $80 are special keys for the terminal
+	LDA	KBDBYTE
+	BMI	.ltrmkey        ; Key's above $80 are special keys for the terminal
 .ltrmkey
-        CMP     #$F0            ; $F0 - Menu key
-        BEQ     .lmenu
-        JMP     .lloop
+	CMP	#$F0            ; $F0 - Menu key
+	BEQ	.lmenu
+	JMP	.lloop
 
 .lnokey
 	JMP	.lloop
@@ -124,49 +124,50 @@ SAVELOAD SUBROUTINE
 	STA	FNAMER
 	STA	FNAME
 
-        JSR     CLRSCR
+	JSR	CLRSCR
 
-        LDX     #0
-        LDY     #0
-        JSR     GOTOXY
+	LDX	#0
+	LDY	#0
+	JSR	GOTOXY
 
-        LDA     #<S_PROMPT
-        LDY     #>S_PROMPT
-        JSR     PRINTSTR
+	LDA	#<S_PROMPT
+	LDY	#>S_PROMPT
+	JSR	PRINTSTR
 
-	LDX     #$14
-        LDY     #0
-        JSR     GOTOXY
+	LDX	#$14
+	LDY	#0
+	JSR	GOTOXY
 
-.keys	LDA     KBDNEW
-        BEQ     .keys		; Wait for keypresses
-        LDA     #$0
-        STA     KBDNEW
+.keys
+	LDA	KBDNEW
+	BEQ	.keys		; Wait for keypresses
+	LDA	#$0
+	STA	KBDNEW
 
-        LDA     KBDBYTE
+	LDA	KBDBYTE
 
 	PHA
-        JSR     ANSICH          ; Local-echoback for now
-        PLA
+	JSR	ANSICH		; Local-echoback for now
+	PLA
 
 	CMP	#$0D
 	BEQ	.scont		; Got filename, continue
 
-        LDX     FNAMEW
-        STA     FNAME,X
-        INC     FNAMEW
+	LDX	FNAMEW
+	STA	FNAME,X
+	INC	FNAMEW
 	JMP	.keys
 
 .scont
 	JSR	CLRSCR
 
-        LDX     #0
-        LDY     #0
-        JSR     GOTOXY
+	LDX	#0
+	LDY	#0
+	JSR	GOTOXY
 
-        LDA     #<S_WAIT
-        LDY     #>S_WAIT
-        JSR     PRINTSTR
+	LDA	#<S_WAIT
+	LDY	#>S_WAIT
+	JSR	PRINTSTR
 .dsend				; Send data
 
 	LDX	#0
@@ -189,60 +190,61 @@ SAVELOAD SUBROUTINE
 ; send header
 	LDA	#0
 	JSR	SENDCH
-        LDA     #0
-        JSR     SENDCH
-        LDA     #0
-        JSR     SENDCH
+	LDA	#0
+	JSR	SENDCH
+	LDA	#0
+	JSR	SENDCH
 	LDA	#$53		; S
 	JSR	SENDCH
 	LDA	#$41		; A
-        JSR     SENDCH
+	JSR	SENDCH
 	LDA	#$56		; V
-        JSR     SENDCH
+	JSR	SENDCH
 	LDA	#$45		; E
-        JSR     SENDCH
+	JSR	SENDCH
 	LDA	#0
 	JSR	SENDCH
 
 .fsend
-        LDX     FNAMER
-        CPX     FNAMEW
-        BEQ     .bsgo           ; Filename has been sent
+	LDX	FNAMER
+	CPX	FNAMEW
+	BEQ	.bsgo           ; Filename has been sent
 
-        ; Handle new byte
-        LDA     FNAME,X         ; New character
-        TAX                     ; Save
-        INC     FNAMER          ; Acknowledge byte by incrementing 
-        TXA
-        JSR    SENDCH
-        JMP     .fsend          ; Filename loop
+	; Handle new byte
+	LDA	FNAME,X         ; New character
+	TAX					; Save
+	INC	FNAMER          ; Acknowledge byte by incrementing 
+	TXA
+	JSR	SENDCH
+	JMP	.fsend          ; Filename loop
 
 .bsgo
 	LDA	#0
 	JSR	SENDCH
 
 ; send SOB address
-        LDA     #<SOB
-        JSR	SENDCH
-        LDA     #>SOB
-        JSR	SENDCH
+	LDA	#<SOB
+	JSR	SENDCH
+	LDA	#>SOB
+	JSR	SENDCH
 
 	LDA	ENDLO
 
-.sloop	LDX	BTMP1
-        LDY     #0
-        LDA     (PTRLO),Y
+.sloop
+	LDX	BTMP1
+	LDY	#0
+	LDA	(PTRLO),Y
 	CPX	#$01
 	BNE	.read2
 	STA	ENDHI		; store end hi byte
 
-        INX
-        STX     BTMP1		; increment BTMP1
+	INX
+	STX	BTMP1		; increment BTMP1
 
-        CMP     #0		; check for hi byte of zero
-        BNE     .read2		; continue if not zero
+	CMP	#0			; check for hi byte of zero
+	BNE	.read2		; continue if not zero
 	LDA	ENDLO
-	CMP	#0		; check for lo byte also zero
+	CMP	#0			; check for lo byte also zero
 	BEQ	.savend		; reached program end
 
 	LDA	ENDHI		; restore value in accumulator
@@ -252,8 +254,8 @@ SAVELOAD SUBROUTINE
 	LDX	BTMP1
 	CPX	#0
 	BNE	.read3
-        INX
-        STX     BTMP1           ; increment BTMP1
+	INX
+	STX	BTMP1		; increment BTMP1
 
 .read3
 
@@ -273,12 +275,12 @@ SAVELOAD SUBROUTINE
 	BNE	.sloop		; keep reading
 
 ; reached the end of the current BASIC line, check for next pointer
-        LDY     #0
-        LDA     (PTRLO),Y
+	LDY	#0
+	LDA	(PTRLO),Y
 .newlo
 
 	PHA
-        JSR     SENDCH          ; send the byte
+	JSR	SENDCH          ; send the byte
 	PLA
 
 	STA	ENDLO		; save the new ENDLO byte for the next line
@@ -287,9 +289,9 @@ SAVELOAD SUBROUTINE
 	STX	BTMP1		; set BTMP1 to read the ENDHI byte next
 
 ; increment BASIC ptr
-        INC     PTRLO
-        BNE     .inc16enc
-        INC     PTRLO+1
+	INC	PTRLO
+	BNE	.inc16enc
+	INC	PTRLO+1
 .inc16enc
 
 	JMP	.sloop
@@ -300,9 +302,9 @@ SAVELOAD SUBROUTINE
 	LDA	ENDHI
 	JSR	SENDCH		; send final end hi byte (zero value)
 
-        LDA     #<S_DONE
-        LDY     #>S_DONE
-        JSR     PRINTSTR
+	LDA	#<S_DONE
+	LDY	#>S_DONE
+	JSR	PRINTSTR
 
 	RTS
 
@@ -324,7 +326,8 @@ HEXDIG SUBROUTINE
 	CMP	#$0A		; alpha digit?
 	BCC	.skip		; if no, then skip
 	ADC	#$06		; add seven
-.skip	ADC	#$30		; convert to ascii
+.skip
+	ADC	#$30		; convert to ascii
 	JMP	$ffd2		; print it
 	; no rts, proceed to HEXOUT
 
@@ -340,16 +343,16 @@ HEXOUT SUBROUTINE
 	JMP	HEXDIG	; print ascii
 
 S_PROMPT
-	DC.B    "ENTER PROGRAM NAME: ",0
+	DC.B	"ENTER PROGRAM NAME: ",0
 
 S_WAIT
-        DC.B    "SENDING PROGRAM DATA... ",0
+	DC.B	"SENDING PROGRAM DATA... ",0
 
 S_DONE
 	DC.B	"SAVING DONE!",0
 
 L_WAIT
-        DC.B    "WAITING FOR PROGRAM DATA... ",0
+	DC.B	"WAITING FOR PROGRAM DATA... ",0
 
 L_DONE
 	DC.B	"LOADING DONE!",0
