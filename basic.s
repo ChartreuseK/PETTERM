@@ -39,12 +39,12 @@ SAVELOAD SUBROUTINE
 
 	LDX	RXBUFR
 	CPX	RXBUFW
-	BEQ	.lnorx          ; Loop till we get a character in
+	BEQ	.lnorx		; Loop till we get a character in
 	
 	; Handle new byte
-	LDA	RXBUF,X         ; New character
-	TAX                     ; Save
-	INC	RXBUFR          ; Acknowledge byte by incrementing 
+	LDA	RXBUF,X		; New character
+	TAX				; Save
+	INC	RXBUFR		; Acknowledge byte by incrementing 
 	TXA
 	
 	;TAX	; Debug print
@@ -68,7 +68,7 @@ SAVELOAD SUBROUTINE
 	LDA	BTMP1
 	CMP	#$02
 	BCS	.inc16a
-	INC	BTMP1            ; Inc BTMP1 if less than 2
+	INC	BTMP1		; Inc BTMP1 if less than 2
 	JMP	.lloop
 
 ; increment BASIC ptr
@@ -108,9 +108,9 @@ SAVELOAD SUBROUTINE
 	STA	KBDNEW
 
 	LDA	KBDBYTE
-	BMI	.ltrmkey        ; Key's above $80 are special keys for the terminal
+	BMI	.ltrmkey	; Key's above $80 are special keys for the terminal
 .ltrmkey
-	CMP	#$F0            ; $F0 - Menu key
+	CMP	#$F0		; $F0 - Menu key
 	BEQ	.lmenu
 	JMP	.lloop
 
@@ -208,15 +208,15 @@ SAVELOAD SUBROUTINE
 .fsend
 	LDX	FNAMER
 	CPX	FNAMEW
-	BEQ	.bsgo           ; Filename has been sent
+	BEQ	.bsgo		; Filename has been sent
 
 	; Handle new byte
-	LDA	FNAME,X         ; New character
-	TAX					; Save
-	INC	FNAMER          ; Acknowledge byte by incrementing 
+	LDA	FNAME,X		; New character
+	TAX				; Save
+	INC	FNAMER		; Acknowledge byte by incrementing 
 	TXA
 	JSR	SENDCH
-	JMP	.fsend          ; Filename loop
+	JMP	.fsend		; Filename loop
 
 .bsgo
 	LDA	#0
@@ -280,7 +280,7 @@ SAVELOAD SUBROUTINE
 .newlo
 
 	PHA
-	JSR	SENDCH          ; send the byte
+	JSR	SENDCH		; send the byte
 	PLA
 
 	STA	ENDLO		; save the new ENDLO byte for the next line
@@ -309,11 +309,11 @@ SAVELOAD SUBROUTINE
 	RTS
 
 ;BLEN SUBROUTINE
-;	LDX	#<SOB  		; lo byte of basic
+;	LDX	#<SOB		; lo byte of basic
 ;	STX	BASICLO
-;	LDX	#>SOB  		; hi byte of basic
+;	LDX	#>SOB		; hi byte of basic
 ;	STX	BASICHI
-;	SEC			; set carry flag
+;	SEC				; set carry flag
 ;	LDA 	SOB		; first lo byte
 ;	SBC	BASICLO		; sub other lo byte
 ;	STA	BLENLO 		; resulting lo byte
