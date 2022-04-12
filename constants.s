@@ -94,6 +94,9 @@ MYRORG		EQU	$1F3F
 ; Start of BASIC on PET/CBM computers
 SOB		EQU	$0401
 
+; Screen Editor
+INIT_SCR	EQU	$E000
+
 ; Zero Page variables
 ; $4B to $50 is free
 CURLOC		EQU	$4B	; 16-bit word

@@ -497,7 +497,8 @@ START	SUBROUTINE
 	; state for the BASIC environment.
 
 	SEI
-	JSR	RESETIO
+	;JSR	RESETIO
+	JSR	INIT_SCR
 	CLI
 
     IFCONST BASIC
