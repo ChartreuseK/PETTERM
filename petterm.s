@@ -508,10 +508,10 @@ START	SUBROUTINE
 	; now in memory. This is essential if we loaded a new
 	; BASIC program via PETTERM.
 
-    ; Load the current End of Basic Location
-    LDX EOB     ; Load End of Basic Location
-    CPX #0		; Check if it changed from loading a BASIC program
-    BEQ .doneEOB
+	; Load the current End of Basic Location
+	LDX	EOB		; Load End of Basic Location
+	CPX	#0		; Check if it changed from loading a BASIC program
+	BEQ	.doneEOB
 
 	; Check SOB pointer location to determine if we are running 
 	; BASIC1 or BASIC2/4. If you don't find $0401 in the
