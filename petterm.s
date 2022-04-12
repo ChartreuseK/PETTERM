@@ -351,11 +351,11 @@ INIT	SUBROUTINE
 	STA	SC_LOWERMOD
 
     IFCONST BASIC
-	; Clear BASIC I/O flags
+	; Clear BASIC I/O flags and variables
 	LDA	#0
 	STA	LOADB
-	LDA	#0
 	STA	SAVEB
+	STA	EOB
     ENDIF
 	
 	JSR	SERINIT
@@ -497,8 +497,8 @@ START	SUBROUTINE
 	; state for the BASIC environment.
 
 	SEI
-	;JSR	RESETIO
-	JSR	INIT_SCR
+	JSR	RESETIO
+	;JSR	INIT_SCR
 	CLI
 
     IFCONST BASIC
@@ -507,6 +507,11 @@ START	SUBROUTINE
 	; End of Arrays Location to the end of any BASIC programs
 	; now in memory. This is essential if we loaded a new
 	; BASIC program via PETTERM.
+
+    ; Load the current End of Basic Location
+    LDX EOB     ; Load End of Basic Location
+    CPX #0		; Check if it changed from loading a BASIC program
+    BEQ .doneEOB
 
 	; Check SOB pointer location to determine if we are running 
 	; BASIC1 or BASIC2/4. If you don't find $0401 in the
@@ -555,6 +560,8 @@ START	SUBROUTINE
 	STX	BAS4_SOV+1
 	STX	BAS4_SOA+1
 	STX	BAS4_EOA+1
+
+.doneEOB
 
     ENDIF ; IFCONST BASIC
 
