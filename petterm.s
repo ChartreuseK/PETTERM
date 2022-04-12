@@ -153,7 +153,7 @@
 ;      higher memory portions of 8K, 16K, and 32K PET. These high memory versions omit
 ;      the BASIC loader program, requiring the user to run the "SYS" command themselves.
 ;
-;      Option MEM8K  : SYS 3400  : Max Size of BASIC Program is 2,375 bytes
+;      Option MEM8K  : SYS 3200  : Max Size of BASIC Program is 2,175 bytes
 ;      Option MEM16K : SYS 8192  : Max Size of BASIC Program is 7,167 bytes
 ;      Option MEM32K : SYS 24576 : Max Size of BASIC Program is 23,551 bytes
 ;
@@ -163,11 +163,11 @@
 ;     needed to support the LOAD BASIC PROGRAM option.
 ;
 ;     To support the EXIT option to return to BASIC, the memory locate of this program was
-;     shifted to starting address of $0D48 (SYS 3200). The program extends from this address
+;     shifted to starting address of $0C80 (SYS 3200). The program extends from this address
 ;     to memory below the beginning of top of 8K memory at $2000, so this should function
 ;     correctly on 8k PETs.
 ;
-;     The starting address of $0D48 also means that the current maximum size of the BASIC
+;     The starting address of $0C80 also means that the current maximum size of the BASIC
 ;     programs supported is 2,375 bytes unless you use one of the "higher memory" versions
 ;     (see more details regarding Makefile above).
 ;   
