@@ -98,9 +98,18 @@ IRQB4LO DS.B    1		; Hardware interrupt lo byte for BASIC 2/4
 IRQB4HI	DS.B	1		; Hardware interrupt hi byte for BASIC 2/4
 SP	DS.B	1
 EXITFLG	DS.B	1		; Exit flag
-
+; XMODEM
+XBUF	DS.B    133     ; 133 byte buffer for XMODEM packet
+XBUFIX	DS.B    1
+XFINAL	DS.B    1
+XPACK	DS.B    1
+XPACKFLG	DS.B    1
+XERRCNT	DS.B    1
+XCRC	DS.B    2
+XPTR	DS.B    2
+XEOF	DS.B    2
 
 ; Make sure not to use $90-95 these are Vectors for BASIC 2+
 	RORG	$90
 	DS.B	1		; Reserve so we get a compiler error if we
-				; allocate too much before
+					; allocate too much before

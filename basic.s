@@ -37,15 +37,7 @@ SAVELOAD SUBROUTINE
 
 .lloop				; Load loop
 
-	LDX	RXBUFR
-	CPX	RXBUFW
-	BEQ	.lnorx		; Loop till we get a character in
-	
-	; Handle new byte
-	LDA	RXBUF,X		; New character
-	TAX				; Save
-	INC	RXBUFR		; Acknowledge byte by incrementing 
-	TXA
+	JSR RXBYTE
 	
 	;TAX	; Debug print
 	;JSR	HEXOUT
@@ -130,45 +122,13 @@ SAVELOAD SUBROUTINE
 	LDY	#0
 	JSR	GOTOXY
 
-	LDA	#<S_PROMPT
-	LDY	#>S_PROMPT
-	JSR	PRINTSTR
-
-	LDX	#$14
-	LDY	#0
-	JSR	GOTOXY
-
-.keys
-	LDA	KBDNEW
-	BEQ	.keys		; Wait for keypresses
-	LDA	#$0
-	STA	KBDNEW
-
-	LDA	KBDBYTE
-
-	PHA
-	JSR	ANSICH		; Local-echoback for now
-	PLA
-
-	CMP	#$0D
-	BEQ	.scont		; Got filename, continue
-
-	LDX	FNAMEW
-	STA	FNAME,X
-	INC	FNAMEW
-	JMP	.keys
-
-.scont
-	JSR	CLRSCR
-
-	LDX	#0
-	LDY	#0
-	JSR	GOTOXY
-
 	LDA	#<S_WAIT
 	LDY	#>S_WAIT
 	JSR	PRINTSTR
-.dsend				; Send data
+
+; Begin Saving
+
+	JSR	XMODEMINIT
 
 	LDX	#0
 	STX	BTMP1
@@ -177,56 +137,16 @@ SAVELOAD SUBROUTINE
 	LDY	#>SOB
 	STY	PTRHI
 
-; Begin Saving
 	LDX	BTMP1
 	LDY	#0
 	LDA	(PTRLO),Y
-	CPX	#0
-	BNE	.sloop
-; save start
-.bsstart
 	STA	ENDLO		; Store end lo byte
-
-; send header
-	LDA	#0
-	JSR	SENDCH
-	LDA	#0
-	JSR	SENDCH
-	LDA	#0
-	JSR	SENDCH
-	LDA	#$53		; S
-	JSR	SENDCH
-	LDA	#$41		; A
-	JSR	SENDCH
-	LDA	#$56		; V
-	JSR	SENDCH
-	LDA	#$45		; E
-	JSR	SENDCH
-	LDA	#0
-	JSR	SENDCH
-
-.fsend
-	LDX	FNAMER
-	CPX	FNAMEW
-	BEQ	.bsgo		; Filename has been sent
-
-	; Handle new byte
-	LDA	FNAME,X		; New character
-	TAX				; Save
-	INC	FNAMER		; Acknowledge byte by incrementing 
-	TXA
-	JSR	SENDCH
-	JMP	.fsend		; Filename loop
-
-.bsgo
-	LDA	#0
-	JSR	SENDCH
 
 ; send SOB address
 	LDA	#<SOB
-	JSR	SENDCH
+	JSR	XSEND
 	LDA	#>SOB
-	JSR	SENDCH
+	JSR	XSEND
 
 	LDA	ENDLO
 
@@ -259,7 +179,7 @@ SAVELOAD SUBROUTINE
 
 .read3
 
-	JSR	SENDCH		; send BASIC program byte
+	JSR	XSEND		; send BASIC program byte
 
 ; increment BASIC ptr
 	INC	PTRLO
@@ -280,7 +200,7 @@ SAVELOAD SUBROUTINE
 .newlo
 
 	PHA
-	JSR	SENDCH		; send the byte
+	JSR	XSEND		; send the byte
 	PLA
 
 	STA	ENDLO		; save the new ENDLO byte for the next line
@@ -300,7 +220,8 @@ SAVELOAD SUBROUTINE
 ; end of BASIC SAVE code
 
 	LDA	ENDHI
-	JSR	SENDCH		; send final end hi byte (zero value)
+	JSR	XSEND		; send final end hi byte (zero value)
+	JSR XFINISH		; finish the xmodem transfer
 
 	LDA	#<S_DONE
 	LDY	#>S_DONE
