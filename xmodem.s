@@ -42,7 +42,7 @@ XSEND SUBROUTINE
 	BEQ	.xmit		; yes, then fetch CRC
 	LDA	#0
 	STA	XBUF,X		; fill rest of buffer with 0
-	BEQ	.xsendfinal	; loop until buffer filled
+	JMP	.xsendfinal	; loop until buffer filled
 	RTS
 .xsendmore
 	INX
@@ -74,13 +74,19 @@ XMIT SUBROUTINE
 	LDA	XCRC
 	STA	XBUF,Y
 .xsendsoh
-	LDX	#0
 	LDA	#$01		; SOH character
 	JSR	SENDCH
+;	JSR	HEXOUT
+
+    LDX #0
+	STX	XBUFIX
 .xsend
 	LDA	XBUF,X
 	JSR	SENDCH
-	INX
+;	JSR	HEXOUT
+
+	INC	XBUFIX
+	LDX	XBUFIX	
 	CPX	#$84		; sent final byte?
 	BNE	.xsend
 
@@ -111,11 +117,13 @@ XFINISH SUBROUTINE
 	BEQ .xdone
 .xfinish
 	CPX	#$82		; buffer contain 128 bytes?
+	BNE .xfill
 	JMP	XMIT		; yes, then fetch CRC
+.xfill
 	LDA	#0
 	STA	XBUF,X		; fill rest of buffer with 0
 	INX
-	BEQ	.xfinish
+	JMP	.xfinish
 .xdone		
 	RTS
 
