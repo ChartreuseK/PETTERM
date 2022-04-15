@@ -56,7 +56,7 @@ XSEND SUBROUTINE
 ;-----------------------------------------------------------------------
 ; Transmit XMODEM packet.
 XMIT SUBROUTINE
-	LDY	#$AC		;apw
+	LDY	#$AC		; apw
 	LDA	#0
 	STA	XBUFIX		; reset the buffer index to 0
 	STA	XCRC
@@ -75,7 +75,7 @@ XMIT SUBROUTINE
 	STA	XBUF,Y
 .xsendsoh
 	LDX	#0
-	LDA	SOH
+	LDA	#$01		; SOH character
 	JSR	SENDCH
 .xsend
 	LDA	XBUF,X
@@ -85,14 +85,14 @@ XMIT SUBROUTINE
 	BNE	.xsend
 
 	JSR	RXBYTE
-	CMP	ACK
+	CMP	#$06		; ACK character
 	BNE	.xnak
 
 	RTS				; return after transmitting
 .xnak
-	CMP	NAK
+	CMP	#$15		; NAK character
 	BEQ	.xerror
-	CMP	ESC
+	CMP	#$1B		; ESC character
 	JMP XERROR
 .xerror
 	INC	XERRCNT
@@ -105,13 +105,18 @@ XMIT SUBROUTINE
 ;-----------------------------------------------------------------------
 ; Finish an XMODEM transfer by sending any remaining bytes in XBUF.
 XFINISH SUBROUTINE
-.xfinish
 	LDY	#$AD		; apw
+	LDX	XBUFIX
+	CPX	#0
+	BEQ .xdone
+.xfinish
 	CPX	#$82		; buffer contain 128 bytes?
 	JMP	XMIT		; yes, then fetch CRC
 	LDA	#0
 	STA	XBUF,X		; fill rest of buffer with 0
+	INX
 	BEQ	.xfinish
+.xdone		
 	RTS
 
 ;-----------------------------------------------------------------------
@@ -153,7 +158,7 @@ XMODEMINIT SUBROUTINE
 	STA	XBUF+1
 	RTS
 .xesc
-	CMP ESC
+	CMP #$1B		; ESC character
     BNE .txstart
 	JMP XERROR
 
@@ -168,14 +173,14 @@ XERROR SUBROUTINE
 
 ;-----------------------------------------------------------------------
 ; XMODEM Control Characters
-SOH	EQU	$01
-EOT	EQU	$04
-ACK	EQU	$06
-NAK	EQU	$15
-CAN	EQU	$18
-CR	EQU	$0d
-LF	EQU	$0a
-ESC	EQU	$1b
+;SOH	EQU	#$01
+;EOT	EQU	#$04
+;ACK	EQU	#$06
+;NAK	EQU	#$15
+;CAN	EQU	#$18
+;CR	EQU	#$0d
+;LF	EQU	#$0a
+;ESC	EQU	#$1b
 
 ;-----------------------------------------------------------------------
 ; CRC lookup table for low byte

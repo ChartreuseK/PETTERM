@@ -220,6 +220,9 @@ SAVELOAD SUBROUTINE
 ; end of BASIC SAVE code
 
 	LDA	ENDHI
+	LDX	#1
+	STX	XFINAL		; XMODEM final packet flag
+
 	JSR	XSEND		; send final end hi byte (zero value)
 	JSR XFINISH		; finish the xmodem transfer
 
