@@ -18,13 +18,13 @@ RXBYTE SUBROUTINE
 ; Flush the receive buffer
 RXFLUSH SUBROUTINE
 .rxflush
-	LDX RXBUFR
-	CPX RXBUFW
-	BEQ .rxempty	; loop till flushed
+	LDX	RXBUFR
+	CPX	RXBUFW
+	BEQ	.rxempty	; loop till flushed
 	INC	RXBUFR		; acknowledge byte by incrementing
 	JMP	.rxflush	
 .rxempty
-    RTS
+	RTS
 
 ;-----------------------------------------------------------------------
 ; Send accumulator byte via XMODEM.
@@ -80,7 +80,7 @@ XMIT SUBROUTINE
 	JSR	SENDCH
 ;	JSR	HEXOUT
 
-    LDX #0
+	LDX	#0
 	STX	XBUFIX
 .xsend
 	LDA	XBUF,X
@@ -104,7 +104,7 @@ XMIT SUBROUTINE
 
 	LDA	XFINAL
 	CMP	#1
-	BNE .xmitexit
+	BNE	.xmitexit
 	JSR	XFINISH
 .xmitexit
 	RTS				; return after transmitting
@@ -119,7 +119,7 @@ XMIT SUBROUTINE
 	CMP	#$0A		; 10 errors?
 	BNE	.xsendsoh	; if no, resend packet
 .xabort
-	JMP XERROR
+	JMP	XERROR
 
 ;-----------------------------------------------------------------------
 ; Finish an XMODEM transfer by sending End of Transmission
@@ -129,9 +129,9 @@ XFINISH SUBROUTINE
 	JSR	SENDCH
 
 	JSR	RXBYTE
-	CMP	#$06        ; ACK character
+	CMP	#$06		; ACK character
 	BNE	.xfinnak
-	JSR RXFLUSH
+	JSR	RXFLUSH
 	RTS
 
 ;-----------------------------------------------------------------------
@@ -154,36 +154,33 @@ XINIT SUBROUTINE
 	LDA	#1
 	STA	XPACK	; XMODEM packet counter
 
-    LDX	#$02	; start data at buffer index 2
+	LDX	#$02	; start data at buffer index 2
 	STX	XBUFIX	; save XBUF index
-
+.xinit
+	JSR	RXBYTE
+	CMP	#"C"
+	BNE	.xesc
+	; received the "C" byte to begin the transfer
 	RTS
+.xesc
+	CMP	#$1B		; ESC character
+	BNE	.xinit
+	JMP	XERROR
 
 ;-----------------------------------------------------------------------
 ; Start a new packet.
 XNEW SUBROUTINE
 	LDY	#$AE
-	LDA	#0
-	STA	XERRCNT	; XMODEM error count
-.txstart
-	JSR	RXBYTE
-	CMP	#"C"
-	BNE	.xesc
-	; received the "C" byte to begin the transfer
+	LDX	#0
+	STX	XERRCNT		; XMODEM error count
 
 	LDA	XPACK
 	STA	XBUF		; store packet counter in first byte of buffer
 
-	LDA	#$FF
-	SEC
-	SBC	XPACK		; calc packet count checksum
+	EOR	#$FF
 	STA	XBUF+1		; store packet count checksum in second byte
 
 	RTS
-.xesc
-	CMP #$1B		; ESC character
-    BNE .txstart
-	JMP XERROR
 
 ;-----------------------------------------------------------------------
 ; Flush RX buffer, print error, and return.
