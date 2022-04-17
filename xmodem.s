@@ -27,9 +27,29 @@ RXFLUSH SUBROUTINE
 	RTS
 
 ;-----------------------------------------------------------------------
+; Initialize an XMODEM transfer.
+XINIT SUBROUTINE
+	LDA	#0
+	STA	XFINAL	; XMODEM final byte of transmission flag.
+	LDA	#1
+	STA	XPACK	; XMODEM packet counter
+
+	LDX	#$02	; start data at buffer index 2
+	STX	XBUFIX	; save XBUF index
+.xinit
+	JSR	RXBYTE
+	CMP	#"C"
+	BNE	.xesc
+	; received the "C" byte to begin the transfer
+	RTS
+.xesc
+	CMP	#$1B		; ESC character
+	BNE	.xinit
+	JMP	XERROR
+
+;-----------------------------------------------------------------------
 ; Send accumulator byte via XMODEM.
 XSEND SUBROUTINE
-	LDY	#$AB		; apw
 	LDX	XBUFIX		; Retrieve XBUF offset
 	STA	XBUF,X		; send BASIC program byte to buffer
 
@@ -52,10 +72,25 @@ XSEND SUBROUTINE
 .xmit
 	JMP	XMIT
 
+
+;-----------------------------------------------------------------------
+; Start a new packet.
+XNEW SUBROUTINE
+	LDY	#$AE
+	LDX	#0
+	STX	XERRCNT		; XMODEM error count
+
+	LDA	XPACK
+	STA	XBUF		; store packet counter in first byte of buffer
+
+	EOR	#$FF
+	STA	XBUF+1		; store packet count checksum in second byte
+
+	RTS
+
 ;-----------------------------------------------------------------------
 ; Transmit XMODEM packet.
 XMIT SUBROUTINE
-	LDY	#$AC		; apw
 
 	JSR	XNEW
 
@@ -105,7 +140,7 @@ XMIT SUBROUTINE
 	LDA	XFINAL
 	CMP	#1
 	BNE	.xmitexit
-	JSR	XFINISH
+	JMP	XFINISH
 .xmitexit
 	RTS				; return after transmitting
 .xnak
@@ -122,8 +157,21 @@ XMIT SUBROUTINE
 	JMP	XERROR
 
 ;-----------------------------------------------------------------------
-; Finish an XMODEM transfer by sending End of Transmission
+; Finish an XMODEM transfer by sending final block and the
+; End of Transmission sequence.
 XFINISH SUBROUTINE
+	LDX	XBUFIX
+	CPX	#0
+	BEQ	.xfinnak
+.xfinish
+	CPX	#$82            ; buffer contain 128 bytes?
+	BNE	.xfinfill
+	JMP	XMIT            ; buffer contains 128 bytes, so transmit
+.xfinfill
+	LDA	#0
+	STA	XBUF,X          ; fill rest of buffer with 0
+	INX
+	JMP	.xfinish
 .xfinnak
 	LDA	#$04		; EOT charachter
 	JSR	SENDCH
@@ -144,42 +192,6 @@ FINDXCRC SUBROUTINE
 	STA	XCRC+1
 	LDA	XCRCLO,X
 	STA	XCRC
-	RTS
-
-;-----------------------------------------------------------------------
-; Initialize an XMODEM transfer.
-XINIT SUBROUTINE
-	LDA	#0
-	STA	XFINAL	; XMODEM final byte of transmission flag.
-	LDA	#1
-	STA	XPACK	; XMODEM packet counter
-
-	LDX	#$02	; start data at buffer index 2
-	STX	XBUFIX	; save XBUF index
-.xinit
-	JSR	RXBYTE
-	CMP	#"C"
-	BNE	.xesc
-	; received the "C" byte to begin the transfer
-	RTS
-.xesc
-	CMP	#$1B		; ESC character
-	BNE	.xinit
-	JMP	XERROR
-
-;-----------------------------------------------------------------------
-; Start a new packet.
-XNEW SUBROUTINE
-	LDY	#$AE
-	LDX	#0
-	STX	XERRCNT		; XMODEM error count
-
-	LDA	XPACK
-	STA	XBUF		; store packet counter in first byte of buffer
-
-	EOR	#$FF
-	STA	XBUF+1		; store packet count checksum in second byte
-
 	RTS
 
 ;-----------------------------------------------------------------------

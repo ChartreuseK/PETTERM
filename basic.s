@@ -221,10 +221,7 @@ SAVELOAD SUBROUTINE
 
 	LDA	ENDHI
 
-	LDX	#1
-	STX	XFINAL		; XMODEM final packet flag
-
-	JSR	XSEND		; send final end hi byte (zero value)
+	JSR	XFINISH		; send final end hi byte (zero value) and finish transfer
 
 	LDA	#<S_DONE
 	LDY	#>S_DONE
