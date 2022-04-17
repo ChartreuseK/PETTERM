@@ -37,7 +37,7 @@ SAVELOAD SUBROUTINE
 
 .lloop				; Load loop
 
-	JSR RXBYTE
+	JSR	RXBYTE
 	
 	;TAX	; Debug print
 	;JSR	HEXOUT
@@ -128,7 +128,7 @@ SAVELOAD SUBROUTINE
 
 ; Begin Saving
 
-	JSR	XMODEMINIT
+	JSR	XINIT	; Initialize first XMODEM packet.
 
 	LDX	#0
 	STX	BTMP1
@@ -220,11 +220,11 @@ SAVELOAD SUBROUTINE
 ; end of BASIC SAVE code
 
 	LDA	ENDHI
+
 	LDX	#1
 	STX	XFINAL		; XMODEM final packet flag
 
 	JSR	XSEND		; send final end hi byte (zero value)
-	JSR XFINISH		; finish the xmodem transfer
 
 	LDA	#<S_DONE
 	LDY	#>S_DONE
@@ -238,9 +238,9 @@ SAVELOAD SUBROUTINE
 ;	LDX	#>SOB		; hi byte of basic
 ;	STX	BASICHI
 ;	SEC				; set carry flag
-;	LDA 	SOB		; first lo byte
+;	LDA		SOB		; first lo byte
 ;	SBC	BASICLO		; sub other lo byte
-;	STA	BLENLO 		; resulting lo byte
+;	STA	BLENLO		; resulting lo byte
 ;	LDA	SOB+1		; first hi byte
 ;	SBC	BASICHI		; carry flg complmnt
 ;	STA	BLENHI		; resulting hi byte

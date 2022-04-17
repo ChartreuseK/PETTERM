@@ -50,6 +50,33 @@ int mygetch ( void )
   return ch;
 }
 
+
+static unsigned char rx_xmodem(int fd)
+{
+
+	unsigned char buf[2];
+	unsigned char *rbufptr;
+
+	int bufcnt;
+
+	buf[0] = 'C';	
+	write(fd, &buf[0], 1);
+
+	bufcnt = read(fd, rbuf, 133);
+	for (int i = 0; i < bufcnt; i++) {
+		printf("%02x ", rbuf[i]);
+	}
+	printf("\n\n\n");
+
+    buf[0] = 0x06;
+    write(fd, &buf[0], 1);
+
+	close(fd);
+
+}
+
+
+
 /* get a byte from intermediate buffer of serial terminal */
    static unsigned char rx_pet(int fd)
    {
@@ -478,6 +505,11 @@ int main(int argc, char **argv)
 
       // POC : Testing BASIC program SAVE/LOAD.
       strupr(argv[1]);
+	if (strcmp(argv[1],"XMODEM_SAVE") == 0) {
+		p = rx_xmodem(fd);	
+			exit(1);
+	}
+	
       if (strcmp(argv[1],"LOAD") == 0) {
 	 if (argc < 3) {
             fprintf(stdout, "usage: %s LOAD <file>\n", argv[0]);

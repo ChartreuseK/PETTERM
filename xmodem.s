@@ -43,7 +43,6 @@ XSEND SUBROUTINE
 	LDA	#0
 	STA	XBUF,X		; fill rest of buffer with 0
 	JMP	.xsendfinal	; loop until buffer filled
-	RTS
 .xsendmore
 	INX
 	CPX	#$82		; buffer contain 128 bytes?
@@ -57,6 +56,9 @@ XSEND SUBROUTINE
 ; Transmit XMODEM packet.
 XMIT SUBROUTINE
 	LDY	#$AC		; apw
+
+	JSR	XNEW
+
 	LDA	#0
 	STA	XBUFIX		; reset the buffer index to 0
 	STA	XCRC
@@ -94,12 +96,23 @@ XMIT SUBROUTINE
 	CMP	#$06		; ACK character
 	BNE	.xnak
 
+	; packet was sent successfully!
+
+	INC	XPACK		; increment packet counter
+	LDX	#$02		; start data at buffer index 2 for next packet
+	STX	XBUFIX		; save XBUF index
+
+	LDA	XFINAL
+	CMP	#1
+	BNE .xmitexit
+	JSR	XFINISH
+.xmitexit
 	RTS				; return after transmitting
 .xnak
 	CMP	#$15		; NAK character
 	BEQ	.xerror
 	CMP	#$1B		; ESC character
-	JMP XERROR
+	BEQ	.xabort
 .xerror
 	INC	XERRCNT
 	LDA	XERRCNT
@@ -109,22 +122,16 @@ XMIT SUBROUTINE
 	JMP XERROR
 
 ;-----------------------------------------------------------------------
-; Finish an XMODEM transfer by sending any remaining bytes in XBUF.
+; Finish an XMODEM transfer by sending End of Transmission
 XFINISH SUBROUTINE
-	LDY	#$AD		; apw
-	LDX	XBUFIX
-	CPX	#0
-	BEQ .xdone
-.xfinish
-	CPX	#$82		; buffer contain 128 bytes?
-	BNE .xfill
-	JMP	XMIT		; yes, then fetch CRC
-.xfill
-	LDA	#0
-	STA	XBUF,X		; fill rest of buffer with 0
-	INX
-	JMP	.xfinish
-.xdone		
+.xfinnak
+	LDA	#$04		; EOT charachter
+	JSR	SENDCH
+
+	JSR	RXBYTE
+	CMP	#$06        ; ACK character
+	BNE	.xfinnak
+	JSR RXFLUSH
 	RTS
 
 ;-----------------------------------------------------------------------
@@ -141,29 +148,37 @@ FINDXCRC SUBROUTINE
 
 ;-----------------------------------------------------------------------
 ; Initialize an XMODEM transfer.
-XMODEMINIT SUBROUTINE
+XINIT SUBROUTINE
+	LDA	#0
+	STA	XFINAL	; XMODEM final byte of transmission flag.
+	LDA	#1
+	STA	XPACK	; XMODEM packet counter
+
+    LDX	#$02	; start data at buffer index 2
+	STX	XBUFIX	; save XBUF index
+
+	RTS
+
+;-----------------------------------------------------------------------
+; Start a new packet.
+XNEW SUBROUTINE
 	LDY	#$AE
 	LDA	#0
 	STA	XERRCNT	; XMODEM error count
-	STA	XFINAL	; XMODEM final packet flag
-	LDA	#1
-	STA	XPACK	; XMODEM packet counter
 .txstart
 	JSR	RXBYTE
 	CMP	#"C"
 	BNE	.xesc
 	; received the "C" byte to begin the transfer
-	LDA	#$00
-	STA	XCRC
-	STA	XCRC+1
 
-	LDX	#$02		; preload 2 bytes into first packet
-	STX	XBUFIX		; save XBUF index
+	LDA	XPACK
+	STA	XBUF		; store packet counter in first byte of buffer
 
-	LDA	#$01
-	STA	XBUF
-	LDA	#$FE	    ; 1's complement of block #
-	STA	XBUF+1
+	LDA	#$FF
+	SEC
+	SBC	XPACK		; calc packet count checksum
+	STA	XBUF+1		; store packet count checksum in second byte
+
 	RTS
 .xesc
 	CMP #$1B		; ESC character
