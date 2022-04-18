@@ -32,7 +32,7 @@ XINITRX SUBROUTINE
 	LDA	#1
 	STA	XBLK	; reset block number to first block
 	LDA	#0
-	STA	XFINAL  ; reset XMODEM final byte of transmission flag.
+	STA	XFINAL	; reset XMODEM final byte of transmission flag.
 	LDA	#"C"
 	JSR	SENDCH
 	RTS
@@ -72,6 +72,7 @@ XRECV SUBROUTINE
 	INX
 	CPX	#$84		; received entire block of 133 bytes?
 	BNE	.xrxdata1
+	; we have received the full block into XBUF
 	LDX	#0
 	LDA	XBUF,X		; get block number
 	CMP	XBLK
@@ -89,8 +90,9 @@ XRECV SUBROUTINE
 	LDA	XBUF,Y
 	JSR	FINDXCRC
 	INY
-	CPY	#$82		; 128 bytes
+	CPY	#$82		; 128 bytes of data
 	BNE	.xrxblockdata1
+	; we have calculated the CRC for the block of data
 	LDA	XBUF,Y		; get block CRC hi byte
 	CMP	XCRC+1
 	BNE	.xrxretry
@@ -247,12 +249,12 @@ XFINISH SUBROUTINE
 	CPX	#0
 	BEQ	.xfinnak
 .xfinish
-	CPX	#$82            ; buffer contain 128 bytes?
+	CPX	#$82	; buffer contain 128 bytes?
 	BNE	.xfinfill
-	JMP	XMIT            ; buffer contains 128 bytes, so transmit
+	JMP	XMIT	; buffer contains 128 bytes, so transmit
 .xfinfill
 	LDA	#0
-	STA	XBUF,X          ; fill rest of buffer with 0
+	STA	XBUF,X	; fill rest of buffer with 0
 	INX
 	JMP	.xfinish
 .xfinnak

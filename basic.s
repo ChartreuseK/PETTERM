@@ -11,6 +11,7 @@ SAVELOAD SUBROUTINE
 .bjmp	JMP	.bsave
 
 .bload
+	LDA	#0
 	STA	LOADB	; Clear BASIC load flag
 
 	JSR	CLRSCR
@@ -24,7 +25,7 @@ SAVELOAD SUBROUTINE
 	JSR	PRINTSTR
 
 	LDX	#0
-	LDY	#2#
+	LDY	#2
 	JSR	GOTOXY
 
 	LDX	#<SOB
@@ -33,44 +34,46 @@ SAVELOAD SUBROUTINE
 	STY	PTRHI		
 
 	JSR	XINITRX		; initial XMODEM transmission
-	LDA	#0
-	STA	XBUFIX		; reset buffer index
+	LDA	#2
+	STA	XBUFIX		; reset buffer index to start of data byte
 	JSR	XRECV		; receive first block of data
 
-.lloop				; Load loop
+.lloop				; Load BASIC loop
 
 	LDA	XBUF, XBUFIX
 	INC	XBUFIX
 
-	LDX	XBUFIX
-	CPX	#$82		; check for end of buffer
-	BNE .lcont
-
-	LDX	#0
-	STX	XBUFIX		; reset buffer index
-	JSR	XRECV		; receive next block of data
-.lcont
 	;TAX	; Debug print
 	;JSR	HEXOUT
 	;TXA
 
-	LDY	XBUFIX
+	LDY	#0
 	STA	(PTRLO),Y
-	INC	XBUFIX
 
-; increment BASIC ptr
+	LDX	XBUFIX
+	CPX	#$82		; check for end of buffer
+	BNE .inc16a
+
+	; finished loading the block
+
+	LDX	XFINAL	; was it the final block?
+	CPX	#1
+	BEQ	.ldone
+
+	; it was not the final block
+
+	LDX	#0
+	STX	XBUFIX		; reset buffer index
+	JSR	XRECV		; receive next block of data
+
 .inc16a
+; increment BASIC ptr
 	INC	PTRLO
 	BNE	.inc16ena
 	INC	PTRLO+1
 .inc16ena
 
-	CPY	#$82
-	BNE	.lloop
-	; finished loading the block
-	LDX	XFINAL	; check if it is the final block
-	CPX	#1
-	BNE	.lloop
+	JMP .lloop
 
 ; end of BASIC LOAD code
 .ldone
