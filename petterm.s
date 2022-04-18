@@ -1,6 +1,6 @@
 ;-----------------------------------------------------------------------
 ; PETTerm
-; Version 0.6.1
+; Version 0.7.0
 ;
 ; A bit-banged full duplex serial terminal for the PET 2001 computers,
 ; including those running BASIC 1. 
@@ -177,6 +177,14 @@
 ;     stripping down to only the essential VIA and PIA reset sequence and values.
 ;
 ;     Cleaned up the source code formatting for a consistent indentation using tabs.
+;
+; 0.7.0
+;
+;     This version now uses the XMODEM protocol to SAVE/LOAD BASIC programs over serial!
+;     by Adam Whitney (K0FFY) - 2022
+;
+;     It is currently written to use XMODEM-CRC, for which each block contains 128 bytes
+;     of data with a 16-bit CRC at the end.
 ;
 ;
 ; Written for the DASM assembler

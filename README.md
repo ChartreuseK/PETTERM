@@ -13,7 +13,7 @@ PETTERM can now handle 2400 baud, along with much improved ANSI terminal compati
 
 Requires 8kB of RAM. (For 4kB PET's please use 0.4.0 version or prior for now.)
 
-Can Load and Save BASIC programs over the serial connection.
+Can Load and Save BASIC programs over the serial connection using XMODEM protocol.
 
 ## Features
 
@@ -22,7 +22,7 @@ Can Load and Save BASIC programs over the serial connection.
 - Works on all versions of BASIC including the oldest PET 2001s with BASIC 1.
 - Can work with as low as 8kB of RAM.
 - Requires only a simple two wire serial interface.
-- BASIC programs can be loaded or saved via serial using the 'petser' companion program.
+- BASIC programs can be loaded or saved via serial using the XMODEM protocol.
 
 ## Usage
 
@@ -41,9 +41,7 @@ Can Load and Save BASIC programs over the serial connection.
     - Tab = Ctrl-I
     - Esc = Ctrl-[ (For Alt/Meta, send Esc then the key)
 - Terminal emulates ANSI escape codes (supports all required by ansi TERMCAP/TERMINFO)
-- Load/Save BASIC Program using 'petser':
-    -  petser SAVE
-    -  petser LOAD myprogram.prg 
+- Load/Save BASIC Program using XMODEM
 
 ## Hardware
 
