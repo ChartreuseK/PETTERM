@@ -28,19 +28,23 @@ SAVELOAD SUBROUTINE
 	LDY	#2
 	JSR	GOTOXY
 
-	LDX	#<SOB
-	STX	PTRLO
-	LDY	#>SOB
-	STY	PTRHI		
-
 	JSR	XINITRX		; initial XMODEM transmission
-	LDA	#2
-	STA	XBUFIX		; reset buffer index to start of data byte
 	JSR	XRECV		; receive first block of data
+
+	LDX	#2
+	LDA	XBUF,X
+	STA	PTRLO
+	INX
+	LDA	XBUF,X
+	STA	PTRHI		
+	INX
+
+	STX	XBUFIX		; set buffer index to first program byte after reading memory start loc
 
 .lloop				; Load BASIC loop
 
-	LDA	XBUF, XBUFIX
+	LDX	XBUFIX
+	LDA	XBUF,X
 	INC	XBUFIX
 
 	;TAX	; Debug print
@@ -62,7 +66,7 @@ SAVELOAD SUBROUTINE
 
 	; it was not the final block
 
-	LDX	#0
+	LDX	#2
 	STX	XBUFIX		; reset buffer index
 	JSR	XRECV		; receive next block of data
 
