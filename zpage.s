@@ -102,8 +102,8 @@ EXITFLG	DS.B	1		; Exit flag
 XBUF	DS.B    133     ; 133 byte buffer for XMODEM packet
 XBUFIX	DS.B    1
 XFINAL	DS.B    1
-XPACK	DS.B    1
-XPACKFLG	DS.B    1
+XBLK	DS.B    1
+XBLKFLG	DS.B    1
 XERRCNT	DS.B    1
 XCRC	DS.B    2
 XPTR	DS.B    2

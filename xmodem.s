@@ -27,24 +27,107 @@ RXFLUSH SUBROUTINE
 	RTS
 
 ;-----------------------------------------------------------------------
-; Initialize an XMODEM transfer.
-XINIT SUBROUTINE
-	LDA	#0
-	STA	XFINAL	; XMODEM final byte of transmission flag.
+; Initialize an XMODEM receive transfer.
+XINITRX SUBROUTINE
 	LDA	#1
-	STA	XPACK	; XMODEM packet counter
+	STA	XBLK	; reset block number to first block
+	LDA	#0
+	STA	XFINAL  ; reset XMODEM final byte of transmission flag.
+	LDA	#"C"
+	JSR	SENDCH
+	RTS
+
+;-----------------------------------------------------------------------
+; Receive a block via XMODEM.
+XRECV SUBROUTINE
+.xrxstart
+	LDA	#0
+	STA	XCRC
+	STA	XCRC+1
+
+	JSR	RXBYTE
+	CMP	#$1B		; ESC character
+	BNE	.xrx
+	JMP	XERROR
+.xrx
+	CMP	#$01		; SOH character
+	BEQ	.xrxdata0
+	CMP #$04		; EOT character
+	BNE	.xrxretry
+	; EOT recieved
+	LDA	#1
+	STA	XFINAL
+	JSR	RXFLUSH		; flush RX buffer
+	JMP	XACK		; send ACK and return
+.xrxretry
+	JSR	RXFLUSH
+	LDA	#$15		; NAK character
+	JSR	SENDCH
+	JMP	.xrxstart
+.xrxdata0
+	LDX	#0
+.xrxdata1
+	JSR	RXBYTE
+	STA	XBUF,X
+	INX
+	CPX	#$84		; received entire block of 133 bytes?
+	BNE	.xrxdata1
+	LDX	#0
+	LDA	XBUF,X		; get block number
+	CMP	XBLK
+	BEQ .xrxblockchksm
+	JMP	XERROR
+.xrxblockchksm
+	EOR	#$FF
+	INX
+	CMP	XBUF,X		; compare block number checksum
+	BEQ	.xrxblockdata0
+	JMP	XERROR
+.xrxblockdata0
+	LDY	#2
+.xrxblockdata1
+	LDA	XBUF,Y
+	JSR	FINDXCRC
+	INY
+	CPY	#$82		; 128 bytes
+	BNE	.xrxblockdata1
+	LDA	XBUF,Y		; get block CRC hi byte
+	CMP	XCRC+1
+	BNE	.xrxretry
+	INY
+	LDA	XBUF,Y
+	CMP	XCRC
+	BNE	.xrxretry
+	; At this point, we have a good block of data in XBLK	
+	RTS
+
+;-----------------------------------------------------------------------
+; Acknowledge receipt of XMODEM block.
+XACK SUBROUTINE
+	INC	XBLK		; increment block counter
+	LDA	#$06		; ACK character
+	JSR	SENDCH		; send ACK
+	RTS
+
+;-----------------------------------------------------------------------
+; Initialize an XMODEM send transfer.
+XINITTX SUBROUTINE
+	LDA	#0
+	STA	XFINAL	; reset XMODEM final byte of transmission flag.
+	LDA	#1
+	STA	XBLK	; reset block number to first block
 
 	LDX	#$02	; start data at buffer index 2
 	STX	XBUFIX	; save XBUF index
-.xinit
+.xinittx
 	JSR	RXBYTE
 	CMP	#"C"
-	BNE	.xesc
+	BNE	.xesctx
 	; received the "C" byte to begin the transfer
 	RTS
-.xesc
+.xesctx
 	CMP	#$1B		; ESC character
-	BNE	.xinit
+	BNE	.xinittx
 	JMP	XERROR
 
 ;-----------------------------------------------------------------------
@@ -66,7 +149,7 @@ XSEND SUBROUTINE
 .xsendmore
 	INX
 	CPX	#$82		; buffer contain 128 bytes?
-	BEQ	.xmit		; yes, then transmit packet
+	BEQ	.xmit		; yes, then transmit block
 	STX	XBUFIX		; Save new XBUF offset
 	RTS
 .xmit
@@ -74,22 +157,22 @@ XSEND SUBROUTINE
 
 
 ;-----------------------------------------------------------------------
-; Start a new packet.
+; Start a new block.
 XNEW SUBROUTINE
 	LDY	#$AE
 	LDX	#0
 	STX	XERRCNT		; XMODEM error count
 
-	LDA	XPACK
-	STA	XBUF		; store packet counter in first byte of buffer
+	LDA	XBLK
+	STA	XBUF		; store block number in first byte of buffer
 
 	EOR	#$FF
-	STA	XBUF+1		; store packet count checksum in second byte
+	STA	XBUF+1		; store block number checksum in second byte
 
 	RTS
 
 ;-----------------------------------------------------------------------
-; Transmit XMODEM packet.
+; Transmit XMODEM block.
 XMIT SUBROUTINE
 
 	JSR	XNEW
@@ -131,10 +214,10 @@ XMIT SUBROUTINE
 	CMP	#$06		; ACK character
 	BNE	.xnak
 
-	; packet was sent successfully!
+	; Block was sent successfully!
 
-	INC	XPACK		; increment packet counter
-	LDX	#$02		; start data at buffer index 2 for next packet
+	INC	XBLK		; increment block number
+	LDX	#$02		; start data at buffer index 2 for next block
 	STX	XBUFIX		; save XBUF index
 
 	LDA	XFINAL
@@ -152,7 +235,7 @@ XMIT SUBROUTINE
 	INC	XERRCNT
 	LDA	XERRCNT
 	CMP	#$0A		; 10 errors?
-	BNE	.xsendsoh	; if no, resend packet
+	BNE	.xsendsoh	; if no, resend block
 .xabort
 	JMP	XERROR
 

@@ -11,9 +11,7 @@ SAVELOAD SUBROUTINE
 .bjmp	JMP	.bsave
 
 .bload
-	LDA	#0
 	STA	LOADB	; Clear BASIC load flag
-	STA	BTMP1	; Clear BTMP1 byte count
 
 	JSR	CLRSCR
 
@@ -33,35 +31,32 @@ SAVELOAD SUBROUTINE
 	STX	PTRLO
 	LDY	#>SOB
 	STY	PTRHI		
-	STY	ENDHI		; Init value
+
+	JSR	XINITRX		; initial XMODEM transmission
+	LDA	#0
+	STA	XBUFIX		; reset buffer index
+	JSR	XRECV		; receive first block of data
 
 .lloop				; Load loop
 
-	JSR	RXBYTE
-	
+	LDA	XBUF, XBUFIX
+	INC	XBUFIX
+
+	LDX	XBUFIX
+	CPX	#$82		; check for end of buffer
+	BNE .lcont
+
+	LDX	#0
+	STX	XBUFIX		; reset buffer index
+	JSR	XRECV		; receive next block of data
+.lcont
 	;TAX	; Debug print
 	;JSR	HEXOUT
 	;TXA
 
-; check for the first 2 bytes
-	LDX	BTMP1
-	CPX	#0
-	BNE	.wri1
-	STA	ENDLO		; Store end byte lo
-.wri1	LDX	BTMP1
-	CPX	#1
-	BNE	.wri2
-	STA	ENDHI		; Store end byte hi
-.wri2
-
-	LDY	#0
+	LDY	XBUFIX
 	STA	(PTRLO),Y
-
-	LDA	BTMP1
-	CMP	#$02
-	BCS	.inc16a
-	INC	BTMP1		; Inc BTMP1 if less than 2
-	JMP	.lloop
+	INC	XBUFIX
 
 ; increment BASIC ptr
 .inc16a
@@ -70,19 +65,19 @@ SAVELOAD SUBROUTINE
 	INC	PTRLO+1
 .inc16ena
 
-	LDX	PTRHI
-	CPX	ENDHI		; cmp step ptr to end hi
-	BNE	.lloop		; keep reading
-	LDX	PTRLO
-	CPX	ENDLO		; cmp step ptr to end lo
-	BNE	.lloop		; keep reading
+	CPY	#$82
+	BNE	.lloop
+	; finished loading the block
+	LDX	XFINAL	; check if it is the final block
+	CPX	#1
+	BNE	.lloop
 
 ; end of BASIC LOAD code
 .ldone
 	; Save the current End of Basic Location
-	LDX	ENDLO
+	LDX	PTRLO
 	STX	EOB
-	LDX	ENDHI
+	LDX	PTRLO+1
 	STX	EOB+1
 	
 	LDA	#<L_DONE
@@ -128,7 +123,7 @@ SAVELOAD SUBROUTINE
 
 ; Begin Saving
 
-	JSR	XINIT	; Initialize first XMODEM packet.
+	JSR	XINITTX	; Initialize first XMODEM packet.
 
 	LDX	#0
 	STX	BTMP1
