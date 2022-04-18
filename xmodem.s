@@ -33,6 +33,7 @@ XINITRX SUBROUTINE
 	STA	XBLK	; reset block number to first block
 	LDA	#0
 	STA	XFINAL	; reset XMODEM final byte of transmission flag.
+	STA	XABRT	; reset the abort flag
 	LDA	#"C"
 	JSR	SENDCH
 	RTS
@@ -46,8 +47,12 @@ XRECV SUBROUTINE
 	STA	XCRC+1
 
 	JSR	RXBYTE
+
 	CMP	#$1B		; ESC character
 	BNE	.xrx
+	LDA	#1
+	STA	XABRT		; set abort flag
+	LDA	#"X"
 	JMP	XERROR
 .xrx
 	CMP	#$01		; SOH character
@@ -65,24 +70,26 @@ XRECV SUBROUTINE
 	JSR	SENDCH
 	JMP	.xrxstart
 .xrxdata0
-	LDX	#0
+	LDY	#0
 .xrxdata1
 	JSR	RXBYTE
-	STA	XBUF,X
-	INX
-	CPX	#$84		; received entire block of 133 bytes?
+	STA	XBUF,Y
+	INY
+	CPY	#$84		; received entire block of 133 bytes?
 	BNE	.xrxdata1
 	; we have received the full block into XBUF
-	LDX	#0
-	LDA	XBUF,X		; get block number
+	LDY	#0
+	LDA	XBUF,Y		; get block number
 	CMP	XBLK
 	BEQ .xrxblockchksm
+	LDA	#"N"
 	JMP	XERROR
 .xrxblockchksm
 	EOR	#$FF
-	INX
-	CMP	XBUF,X		; compare block number checksum
+	INY
+	CMP	XBUF,Y		; compare block number checksum
 	BEQ	.xrxblockdata0
+	LDA	#"K"
 	JMP	XERROR
 .xrxblockdata0
 	LDY	#2
@@ -101,7 +108,7 @@ XRECV SUBROUTINE
 	CMP	XCRC
 	BNE	.xrxretry
 	; At this point, we have a good block of data in XBLK	
-	RTS
+	JMP	XACK
 
 ;-----------------------------------------------------------------------
 ; Acknowledge receipt of XMODEM block.
@@ -130,6 +137,7 @@ XINITTX SUBROUTINE
 .xesctx
 	CMP	#$1B		; ESC character
 	BNE	.xinittx
+	LDA	#"X"
 	JMP	XERROR
 
 ;-----------------------------------------------------------------------
@@ -160,7 +168,7 @@ XSEND SUBROUTINE
 
 ;-----------------------------------------------------------------------
 ; Start a new block.
-XNEW SUBROUTINE
+XNEWTX SUBROUTINE
 	LDY	#$AE
 	LDX	#0
 	STX	XERRCNT		; XMODEM error count
@@ -177,7 +185,7 @@ XNEW SUBROUTINE
 ; Transmit XMODEM block.
 XMIT SUBROUTINE
 
-	JSR	XNEW
+	JSR	XNEWTX
 
 	LDA	#0
 	STA	XBUFIX		; reset the buffer index to 0
@@ -239,6 +247,7 @@ XMIT SUBROUTINE
 	CMP	#$0A		; 10 errors?
 	BNE	.xsendsoh	; if no, resend block
 .xabort
+	LDA	#"X"
 	JMP	XERROR
 
 ;-----------------------------------------------------------------------
@@ -282,6 +291,9 @@ FINDXCRC SUBROUTINE
 ;-----------------------------------------------------------------------
 ; Flush RX buffer, print error, and return.
 XERROR SUBROUTINE
+	JSR	PRINTCH		; Print the error indicator character in A
+	LDA	#" "
+	JSR	PRINTCH
 	JSR	RXFLUSH
 	LDA	#<X_ERROR
 	LDY	#>X_ERROR

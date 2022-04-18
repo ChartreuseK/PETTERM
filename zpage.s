@@ -103,11 +103,9 @@ XBUF	DS.B    133     ; 133 byte buffer for XMODEM packet
 XBUFIX	DS.B    1
 XFINAL	DS.B    1
 XBLK	DS.B    1
-XBLKFLG	DS.B    1
 XERRCNT	DS.B    1
 XCRC	DS.B    2
-XPTR	DS.B    2
-XEOF	DS.B    2
+XABRT	DS.B    1
 
 ; Make sure not to use $90-95 these are Vectors for BASIC 2+
 	RORG	$90

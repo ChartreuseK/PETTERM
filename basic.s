@@ -73,6 +73,10 @@ SAVELOAD SUBROUTINE
 	INC	PTRLO+1
 .inc16ena
 
+	LDX	XABRT
+	CPX	#1			; check abort flag
+	BEQ	.ldone
+
 	JMP .lloop
 
 ; end of BASIC LOAD code
