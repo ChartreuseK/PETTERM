@@ -51,6 +51,10 @@ SAVELOAD SUBROUTINE
 	JSR	XINITRX		; initial XMODEM transmission
 	JSR	XRECV		; receive first block of data
 
+	LDX	XABRT
+	CPX	#1			; check abort flag
+	BEQ	.lmenu		; return to menu
+
 	LDX	#2
 	LDA	XBUF,X
 	STA	PTRLO
@@ -80,7 +84,7 @@ SAVELOAD SUBROUTINE
 
 	; finished loading the block
 
-	LDX	XFINAL	; was it the final block?
+	LDX	XFINAL		; was it the final block?
 	CPX	#1
 	BEQ	.ldone
 
@@ -246,8 +250,9 @@ SAVELOAD SUBROUTINE
 ; end of BASIC SAVE code
 
 	LDA	ENDHI
+	JSR	XSEND		; send final end hi byte
 
-	JSR	XFINISH		; send final end hi byte (zero value) and finish transfer
+	JSR	XFINISH		; finish transfer
 
 	LDA	#<S_DONE
 	LDY	#>S_DONE

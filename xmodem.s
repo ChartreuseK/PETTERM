@@ -8,7 +8,7 @@ RXBYTE SUBROUTINE
 .norx
 	LDX	RXBUFR
 	CPX	RXBUFW
-	BEQ	.norx		; loop till we get a character in
+	BEQ	.norx
 	; Handle new byte
 	LDA	RXBUF,X		; new character
 	INC	RXBUFR		; acknowledge byte by incrementing
@@ -68,6 +68,18 @@ XRECV SUBROUTINE
 	JSR	RXFLUSH
 	LDA	#$15		; NAK character
 	JSR	SENDCH
+	; After sending NAK, check for keypress on terminal
+.rxkey
+	LDA	KBDNEW
+	BEQ	.norxkey
+	LDA	#$0
+	STA	KBDNEW
+	LDA	KBDBYTE
+	BMI	.rxtrmkey	; Key's above $80 are special keys for the terminal
+.rxtrmkey
+	CMP	#$F0		; $F0 - Menu key
+	BEQ	.rxmenu
+.norxkey
 	JMP	.xrxstart
 .xrxdata0
 	LDY	#0
@@ -109,6 +121,10 @@ XRECV SUBROUTINE
 	BNE	.xrxretry
 	; At this point, we have a good block of data in XBLK	
 	JMP	XACK
+.rxmenu
+	LDX	#1
+	STX	XABRT
+	RTS
 
 ;-----------------------------------------------------------------------
 ; Acknowledge receipt of XMODEM block.
@@ -255,24 +271,30 @@ XMIT SUBROUTINE
 ; End of Transmission sequence.
 XFINISH SUBROUTINE
 	LDX	XBUFIX
-	CPX	#0
-	BEQ	.xfinnak
+	CPX	#$02	; no data bytes?
+	BEQ	.xtxeot
 .xfinish
 	CPX	#$82	; buffer contain 128 bytes?
 	BNE	.xfinfill
-	JMP	XMIT	; buffer contains 128 bytes, so transmit
+	JSR	XMIT	; transmit final block
+	JMP	.xtxeot
 .xfinfill
 	LDA	#0
 	STA	XBUF,X	; fill rest of buffer with 0
 	INX
 	JMP	.xfinish
-.xfinnak
+.xtxeot
+	INC	XFINAL
+	LDX	XFINAL
+	CPX	#3			; wait for ACK at most 3 times
+	BEQ	.xtxdone
 	LDA	#$04		; EOT charachter
-	JSR	SENDCH
+	JSR	SENDCH		; send EOT
 
 	JSR	RXBYTE
 	CMP	#$06		; ACK character
-	BNE	.xfinnak
+	BNE	.xtxeot
+.xtxdone
 	JSR	RXFLUSH
 	RTS
 

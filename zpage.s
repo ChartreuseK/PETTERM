@@ -90,10 +90,10 @@ EOB	DS.B	2			; Pointer to End of BASIC for loaded program
 ; XMODEM
 XBUF	DS.B    133     ; 133 byte buffer for XMODEM packet
 XBUFIX	DS.B    1
+XCRC	DS.B    2
 XFINAL	DS.B    1
 XBLK	DS.B    1
 XERRCNT	DS.B    1
-XCRC	DS.B    2
 XABRT	DS.B    1
     ENDIF
 IRQB1LO DS.B    1		; Hardware interrupt lo byte for BASIC 1
