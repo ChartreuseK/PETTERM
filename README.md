@@ -5,7 +5,7 @@ including those running BASIC 1!**
 
 Written by Hayden Kroepfl (Chartreuse) 2017-2020
 
-BASIC Save/Load extensions by Adam Whitney (K0FFY) 2022
+BASIC Save/Load and XMODEM extensions by Adam Whitney (K0FFY) 2022
 
 ## Latest Updates
 
