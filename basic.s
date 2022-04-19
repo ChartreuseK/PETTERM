@@ -1,5 +1,9 @@
+;#######################################################################
+; BASIC Program Save/Load Routines
+;#######################################################################
+
 ;-----------------------------------------------------------------------
-; BASIC I/O subroutine
+; Program I/O subroutine
 SAVELOAD SUBROUTINE
 	LDA	#1
 	CMP	LOADB
@@ -8,11 +12,27 @@ SAVELOAD SUBROUTINE
 	CMP	SAVEB
 	BEQ	.bjmp
 	RTS
-.bjmp	JMP	.bsave
-
+.bjmp
+	JMP	.bsave
 .bload
 	LDA	#0
 	STA	LOADB	; Clear BASIC load flag
+
+	JSR	CLRSCR
+
+	LDX	#0
+	LDY	#0
+	JSR	GOTOXY
+
+	LDA	#<L_PROMPT
+	LDY	#>L_PROMPT
+	JSR	PRINTSTR
+
+.keys
+	LDA	KBDNEW
+	BEQ	.keys		; wait for keypress
+	LDA	#$0
+	STA	KBDNEW		; reset keypress flag
 
 	JSR	CLRSCR
 
@@ -235,42 +255,8 @@ SAVELOAD SUBROUTINE
 
 	RTS
 
-;BLEN SUBROUTINE
-;	LDX	#<SOB		; lo byte of basic
-;	STX	BASICLO
-;	LDX	#>SOB		; hi byte of basic
-;	STX	BASICHI
-;	SEC				; set carry flag
-;	LDA		SOB		; first lo byte
-;	SBC	BASICLO		; sub other lo byte
-;	STA	BLENLO		; resulting lo byte
-;	LDA	SOB+1		; first hi byte
-;	SBC	BASICHI		; carry flg complmnt
-;	STA	BLENHI		; resulting hi byte
-;	RTS
-
-HEXDIG SUBROUTINE
-	CMP	#$0A		; alpha digit?
-	BCC	.skip		; if no, then skip
-	ADC	#$06		; add seven
-.skip
-	ADC	#$30		; convert to ascii
-	JMP	$ffd2		; print it
-	; no rts, proceed to HEXOUT
-
-HEXOUT SUBROUTINE
-	PHA		; save the byte
-	LSR
-	LSR		; extract 4...
-	LSR		; ...high bits
-	LSR
-	JSR	HEXDIG
-	PLA		; bring byte back
-	AND	#$0f	; extract low four
-	JMP	HEXDIG	; print ascii
-
-S_PROMPT
-	DC.B	"ENTER PROGRAM NAME: ",0
+L_PROMPT
+	DC.B	"HIT ANY KEY WHEN SENDER IS READY. ",0
 
 S_WAIT
 	DC.B	"SENDING PROGRAM DATA... ",0
@@ -283,4 +269,3 @@ L_WAIT
 
 L_DONE
 	DC.B	"LOADING DONE!",0
-

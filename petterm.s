@@ -153,10 +153,6 @@
 ;      higher memory portions of 8K, 16K, and 32K PET. These high memory versions omit
 ;      the BASIC loader program, requiring the user to run the "SYS" command themselves.
 ;
-;      Option MEM8K  : SYS 3200  : Max Size of BASIC Program is 2,175 bytes
-;      Option MEM16K : SYS 8192  : Max Size of BASIC Program is 7,167 bytes
-;      Option MEM32K : SYS 24576 : Max Size of BASIC Program is 23,551 bytes
-;
 ;   - Included a POSIX C program and Makefile in the test folder than can be used for the
 ;     SAVE BASIC and LOAD BASIC options.
 ;   - Added an EXIT option to allow the user to exit PETTERM and return to BASIC, which was
@@ -298,9 +294,7 @@ INIT	SUBROUTINE
 	STA	BAS4_VECT_IRQ	; Let's see if we can get away with modifying
 	STX	BAS4_VECT_IRQ+1	; both versions vectors
 	
-	
 	JSR	INITVIA
-	
 	
 	; Initialize state
 	LDA	#STIDLE		; Output 1 idle tone first
