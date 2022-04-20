@@ -197,7 +197,7 @@
 	SEG.U	ZPAGE
 	RORG	MYRORG		; RORG location for this memory segment
 	
-	INCLUDE	"zpage.s"
+	INCLUDE	"vars.s"
 	
 	REND
 ;-----------------------------------------------------------------------
