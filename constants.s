@@ -97,16 +97,7 @@ SOB		EQU	$0401
 ; Screen Editor
 INIT_SCR	EQU	$E000
 
-; Zero Page variables
-; $4B to $50 is free
-CURLOC		EQU	$4B	; 16-bit word
-TMPA		EQU	$4D	; 16-bit word
-TMPA2		EQU	$4F	; 16-bit word
-; $54 to $5D is free
-PTRLO		EQU	$54	; byte
-PTRHI		EQU	$55	; byte
-; $B1 to $C3 is free if tape not being read or written
-ANSISTK		EQU	$B1	; 16 bytes
+
 
 
 MODE1_ECHO	EQU	$80

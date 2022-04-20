@@ -1,6 +1,6 @@
-; zpage.s - Zero page location definitions
+; vars.s - Uninitialized variable definitions
 ;-------------------------------------------------------------------------------
-; This file is virtually positioned at address 0
+; This file is virtually positioned at some address
 ; Nothing can be initialized here, just reserving addresses
 
 SERCNT	DS.B	1		; Current sample number
