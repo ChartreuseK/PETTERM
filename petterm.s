@@ -194,7 +194,7 @@
 ; addressing mode, we have now located these explictly in constants.s.
 
 ;-----------------------------------------------------------------------
-	SEG.U	ZPAGE
+	SEG.U	VARS
 	RORG	MYRORG		; RORG location for this memory segment
 	
 	INCLUDE	"vars.s"
