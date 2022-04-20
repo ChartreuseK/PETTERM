@@ -2,3 +2,6 @@ build/
 old_discard/
 Releases/
 TAPs/
+notes/
+*.lst
+*.prg

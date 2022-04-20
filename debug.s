@@ -9,12 +9,12 @@ HEXDIG SUBROUTINE
 	; no rts, proceed to HEXOUT
 
 HEXOUT SUBROUTINE
-	PHA		; save the byte
+	PHA			; save the byte
 	LSR
-	LSR		; extract 4...
-	LSR		; ...high bits
+	LSR			; extract 4...
+	LSR			; ...high bits
 	LSR
 	JSR	HEXDIG
-	PLA		; bring byte back
-	AND	#$0f	; extract low four
-	JMP	HEXDIG	; print ascii
+	PLA			; bring byte back
+	AND	#$0f		; extract low four
+	JMP	HEXDIG		; print ascii

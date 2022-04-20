@@ -30,10 +30,10 @@ RXFLUSH SUBROUTINE
 ; Initialize an XMODEM receive transfer.
 XINITRX SUBROUTINE
 	LDA	#1
-	STA	XBLK	; reset block number to first block
+	STA	XBLK		; reset block number to first block
 	LDA	#0
-	STA	XFINAL	; reset XMODEM final byte of transmission flag.
-	STA	XABRT	; reset the abort flag
+	STA	XFINAL		; reset XMODEM final byte of transmission flag.
+	STA	XABRT		; reset the abort flag
 	LDA	#"C"
 	JSR	SENDCH
 	RTS
@@ -138,12 +138,12 @@ XACK SUBROUTINE
 ; Initialize an XMODEM send transfer.
 XINITTX SUBROUTINE
 	LDA	#0
-	STA	XFINAL	; reset XMODEM final byte of transmission flag.
+	STA	XFINAL		; reset XMODEM final byte of transmission flag.
 	LDA	#1
-	STA	XBLK	; reset block number to first block
+	STA	XBLK		; reset block number to first block
 
-	LDX	#$02	; start data at buffer index 2
-	STX	XBUFIX	; save XBUF index
+	LDX	#$02		; start data at buffer index 2
+	STX	XBUFIX		; save XBUF index
 .xinittx
 	JSR	RXBYTE
 	CMP	#"C"
@@ -271,22 +271,22 @@ XMIT SUBROUTINE
 ; End of Transmission sequence.
 XFINISH SUBROUTINE
 	LDX	XBUFIX
-	CPX	#$02	; no data bytes?
+	CPX	#$02		; no data bytes?
 	BEQ	.xtxeot
 .xfinish
-	CPX	#$82	; buffer contain 128 bytes?
+	CPX	#$82		; buffer contain 128 bytes?
 	BNE	.xfinfill
-	JSR	XMIT	; transmit final block
+	JSR	XMIT		; transmit final block
 	JMP	.xtxeot
 .xfinfill
 	LDA	#0
-	STA	XBUF,X	; fill rest of buffer with 0
+	STA	XBUF,X		; fill rest of buffer with 0
 	INX
 	JMP	.xfinish
 .xtxeot
 	INC	XFINAL
 	LDX	XFINAL
-	CPX	#3			; wait for ACK at most 3 times
+	CPX	#3		; wait for ACK at most 3 times
 	BEQ	.xtxdone
 	LDA	#$04		; EOT charachter
 	JSR	SENDCH		; send EOT

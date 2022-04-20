@@ -3,7 +3,7 @@
 **A bit-banged full duplex serial terminal for the Commodore PET/CBM computers,
 including those running BASIC 1!**
 
-Written by Hayden Kroepfl (Chartreuse) 2017-2020
+Written by Hayden Kroepfl (Chartreuse) 2017-2022
 
 BASIC Save/Load and XMODEM extensions by Adam Whitney (K0FFY) 2022
 
@@ -11,9 +11,12 @@ BASIC Save/Load and XMODEM extensions by Adam Whitney (K0FFY) 2022
 
 PETTERM can now handle 2400 baud, along with much improved ANSI terminal compatibility.
 
-Requires 8kB of RAM. (For 4kB PET's please use 0.4.0 version or prior for now.)
+Requires at least 8kB of RAM -- For 4kB PET's please use 0.4.0 version or prior for now
 
-Can Load and Save BASIC programs over the serial connection using XMODEM protocol.
+Can Load and Save BASIC programs over the serial connection using XMODEM-CRC protocol.
+Using the high-mem version it can be loaded on top of an existing basic program provided
+there is enough free space after the program. These versions don't include a stub loader
+and you must manually SYS xxxx into the program.
 
 ## Features
 
@@ -22,7 +25,7 @@ Can Load and Save BASIC programs over the serial connection using XMODEM protoco
 - Works on all versions of BASIC including the oldest PET 2001s with BASIC 1.
 - Can work with as low as 8kB of RAM.
 - Requires only a simple two wire serial interface.
-- BASIC programs can be loaded or saved via serial using the XMODEM protocol.
+- BASIC programs can be loaded or saved via serial using the XMODEM-CRC protocol.
 
 ## Usage
 
@@ -41,7 +44,7 @@ Can Load and Save BASIC programs over the serial connection using XMODEM protoco
     - Tab = Ctrl-I
     - Esc = Ctrl-[ (For Alt/Meta, send Esc then the key)
 - Terminal emulates ANSI escape codes (supports all required by ansi TERMCAP/TERMINFO)
-- Load/Save BASIC Program using XMODEM
+- Load/Save BASIC Program using XMODEM-CRC
 
 ## Hardware
 
@@ -54,21 +57,27 @@ Don't forget the **ground** connection to either pin N or Pin 1
 If coming from a version prior to 0.4.0, a connection between pin C and B of the user-port is required. Adapters meant for VIC-20 or C64 use should already have this present.
 This change is required for all baud rates in this version.
 
-Commodore PET - Serial Hardware Signals and Levels:
+These connectors are designed to be compatible with standard serial adapters and modems for the VIC-20 and C64, however as the PET does not provide 5v on the userport, an
+inline adapter or external power is needed for these circuits, and the 5v pin on the userport connector disconnected. 
 
+Commodore PET - RS-232 simple conversion circuit:
+
+```
     TTL(0V - +5V)                  RS-232 (-13V - +13V)
 
-                3V-5.5V DC Power
+                5v DC Power (take from cassette or internal)
      ______       |     _________             ________
     |      |      |--- |   MAX   |           |        |
-    |      |B\         |L  3232 R|           |        |
+    |      |B\         |L  232  R|           |        |
     | PET  |  |--R1OUT-|O       S|--T1OUT---2| RS-232 |
     | User |C/         |G       2|--R1OUT---3| Serial |
     | Port |M----T1OUT-|I       3|           |  DB9   |
     |      |           |C       2|           |        |
     |______|1-----GND--|_________|--GND-----5|________|
+```
 
 **Warning:** Connections to the PET user port are RS-232 TTL level signals (0V to +5V). Standard RS-232 serial level signals are -13V to +13V (or more). Connecting standard RS-232 level signals to your PET's user port without an RS-232 to TTL interface will damage your computer and make you sad. (See this [SparkFun explanation](https://www.sparkfun.com/tutorials/215) for more details.)
+
 
 ## Files
 

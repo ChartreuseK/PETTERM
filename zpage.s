@@ -18,7 +18,7 @@ TXNEW	DS.B	1		; Indicates to start sending a byte
 
 BAUD	DS.B	1		; Current baud rate, index into table
 
-COL	DS.B	1		; Current cursor position		
+COL	DS.B	1		; Current cursor position
 ROW	DS.B	1
 
 ;CURLOC	DS.W	1		; Pointer to current screen location
@@ -39,9 +39,9 @@ KEY	DS.B	1
 SHIFT	DS.B	1
 CTRL	DS.B	1
 
-KROW	DS.B 1			; Temp variables for split/fast key scanning
-KROWFND	DS.B 1
-KBITFND	DS.B 1
+KROW	DS.B	1		; Temp variables for split/fast key scanning
+KROWFND	DS.B	1
+KBITFND	DS.B	1
 
 
 MODE1	DS.B	1		; 76543210
@@ -86,24 +86,24 @@ FNAME	DS.B	16		; File name pointer
 BTMP1	DS.B	1		; BASIC temp var
 ENDLO	DS.B	1		; BASIC end lo byte
 ENDHI	DS.B	1		; BASIC end hi byte
-EOB	DS.B	2			; Pointer to End of BASIC for loaded program
+EOB	DS.B	2		; Pointer to End of BASIC for loaded program
 ; XMODEM
-XBUF	DS.B    133     ; 133 byte buffer for XMODEM packet
-XBUFIX	DS.B    1
-XCRC	DS.B    2
-XFINAL	DS.B    1
-XBLK	DS.B    1
-XERRCNT	DS.B    1
-XABRT	DS.B    1
+XBUF	DS.B	133	; 133 byte buffer for XMODEM packet
+XBUFIX	DS.B	1
+XCRC	DS.B	2
+XFINAL	DS.B	1
+XBLK	DS.B	1
+XERRCNT	DS.B	1
+XABRT	DS.B	1
     ENDIF
-IRQB1LO DS.B    1		; Hardware interrupt lo byte for BASIC 1
-IRQB1HI DS.B    1		; Hardware interrupt hi byte for BASIC 1
-IRQB4LO DS.B    1		; Hardware interrupt lo byte for BASIC 2/4
+IRQB1LO DS.B	1		; Hardware interrupt lo byte for BASIC 1
+IRQB1HI DS.B	1		; Hardware interrupt hi byte for BASIC 1
+IRQB4LO DS.B	1		; Hardware interrupt lo byte for BASIC 2/4
 IRQB4HI	DS.B	1		; Hardware interrupt hi byte for BASIC 2/4
 SP	DS.B	1
 EXITFLG	DS.B	1		; Exit flag
 
 ; Make sure not to use $90-95 these are Vectors for BASIC 2+
-	RORG	$90
-	DS.B	1		; Reserve so we get a compiler error if we
-					; allocate too much before
+;	RORG	$90
+;	DS.B	1		; Reserve so we get a compiler error if we
+;				; allocate too much before

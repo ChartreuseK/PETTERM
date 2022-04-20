@@ -13,7 +13,7 @@
 ;     http://www.6502.org/users/andre/petindex/progmod.html 
 ;     http://www.zimmers.net/cbmpics/cbm/PETx/petmem.txt
 ;     http://www.commodore.ca/manuals/commodore_pet_2001_quick_reference.pdf
-
+;
 ; I believe the VIA should be running at CPU clock rate of 1MHz
 ; This does not divide evenly to common baud rates, there will be some error
 ; Though the error values seem almost insignificant, even with the int. divisor
@@ -606,7 +606,7 @@ START	SUBROUTINE
 	INCLUDE "basic.s"
 
     ENDIF
-	
+
 
 ;-----------------------------------------------------------------------
 ; Static data
@@ -895,5 +895,5 @@ RESETIO SUBROUTINE
 
 ;----------------------------------------------------------------------------
 
-	ECHO "Program size in HEX: ", .-$401
-	ECHO "Size from start of ram HEX: ", .
+	ECHO "Program size in HEX: ", .-MYORG
+	ECHO "Program end location HEX: ", .

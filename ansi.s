@@ -23,7 +23,7 @@ ANSICH	SUBROUTINE
 	STA	ANSISTKI
 .clrstk				; Clear the parameter stack to be ready
 	STA	ANSISTK-1,X
-	DEX	
+	DEX
 
 	BNE	.clrstk
 .ignore
