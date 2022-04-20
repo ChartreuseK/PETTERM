@@ -112,6 +112,14 @@ DOMENU	SUBROUTINE
 	BEQ	.tglcase
 	CMP	#'5
 	BEQ	.tglinv
+	CMP	#'6
+	BEQ	.loadb
+	CMP	#'7
+	BEQ	.saveb
+	CMP	#'X
+	BEQ	.bye
+	CMP	#'x
+	BEQ	.bye
 	CMP	#$0D		; CR
 	BEQ	.done
 	BNE	.keywait
@@ -143,12 +151,24 @@ DOMENU	SUBROUTINE
 	; Fall into .doupdate
 .doupdate
 	JMP	.update
+.loadb
+	LDA	#1
+	STA	LOADB
+	JMP	.done
+.saveb	LDA	#1
+	STA	SAVEB
+	JMP	.done
+.bye
+	LDA	#1
+	STA	EXITFLG
+	; Fall into .done
 .done
 	RTS
 	
 	;	 0123456789012345678901234567890123456789
 S_BANNER
-	DC.B	"PETTERM v0.5.0        CHARTREUSE - 2020",13,10
+	DC.B	"PETTERM v0.7.0        CHARTREUSE - 2020",13,10
+	DC.B	"                      K0FFY        2022",13,10
 	DC.B	"---------------------------------------",13,10,10,0
 S_MENU
 	DC.B	"[1] DECREASE BAUD RATE",13,10,10
@@ -156,7 +176,13 @@ S_MENU
 	DC.B	"[3] TOGGLE LOCAL ECHO",13,10,10
 	DC.B	"[4] TOGGLE UPPERCASE/MIXED CASE",13,10,10
 	DC.B	"[5] TOGGLE INVERSE CASE (FOR ORIG ROMS)",13,10,10
-	DC.B	"[RETURN] START TERMINAL",13,10,0
+    IFCONST BASIC
+	DC.B	"[6] LOAD PROGRAM",13,10,10
+	DC.B	"[7] SAVE PROGRAM",13,10,10
+    ENDIF
+	DC.B	"[RETURN] START TERMINAL",13,10,10
+	DC.B    "[X] EXIT",13,10,0
+
 	
 S_CUR
 	DC.B	"CURRENT: ",0

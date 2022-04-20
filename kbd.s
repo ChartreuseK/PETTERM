@@ -213,7 +213,7 @@ LOG2_TBL DC.B -1,7,6,6,5,5,5,5,4,4,4,4,4,4,4,4
 ; $F4 = LEFT
 ;
 KBDMATRIX 
-	IFCONST BUISKBD
+    IFCONST BUISKBD
 ; Matrix for Business Keyboards
 KR0	DC.B	 '. ,$0E,$F3,'8 ,'- ,'8 ,'5 ,'2  ;$8E = BothShift+2, $1D = CursRight
 KR1	DC.B	 '9 ,$EF,'^ ,'7 ,'0 ,'7 ,'4 ,'1
@@ -287,7 +287,7 @@ SKR6	DC.B	 '3, '1,$0D, ';, 'M, 'B, 'C, 'Z
 SKR7	DC.B	 '+, '2,$EF, '?, ',, 'N, 'V, 'X
 SKR8	DC.B	 '-, '0,$00, '>,$FF, '}, '~,$00
 SKR9	DC.B	 '=, '.,$EF,$03, '<, ' , '{,$FF
-	ENDIF
+    ENDIF
 
 
 

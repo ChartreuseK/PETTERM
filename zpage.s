@@ -21,12 +21,12 @@ BAUD	DS.B	1		; Current baud rate, index into table
 COL	DS.B	1		; Current cursor position		
 ROW	DS.B	1
 
-CURLOC	DS.W	1		; Pointer to current screen location
+;CURLOC	DS.W	1		; Pointer to current screen location
 TMP1	DS.B	1	
 TMP2	DS.B	1
 
-TMPA	DS.W	1
-TMPA2	DS.W	1
+;TMPA	DS.W	1
+;TMPA2	DS.W	1
 CNT	DS.B	1	
 
 
@@ -63,7 +63,7 @@ KEYOFF	DS.B	1		; Keyboard matrix offset for shift
 KBDTMP	DS.B 	1		; Keyboard scanning temp, to allow BIT instruction
 
 ANSISTKL	EQU	16	; Allow up to 16 arguments (any more will just be dropped)
-ANSISTK	DS.B	ANSISTKL	; The commands we support mainly take 1 or 2, though SGR 
+;ANSISTK	DS.B	ANSISTKL	; The commands we support mainly take 1 or 2, though SGR 
 				; could have a long chain of attributes
 ANSISTKI DS.B	1
 ANSIIN	DS.B	1		; Are we inside an escape sequence
@@ -77,8 +77,33 @@ LASTCH	DS.B	1		; Last printable character drawn to screen
 RXBUFW	DS.B	1		; Write pointer
 RXBUFR	DS.B	1		; Read pointer
 KFAST	DS.B	1		; 0 if slow/normal scanning, 1 for fast split scanning
+LOADB	DS.B	1		; Load BASIC program flag
+SAVEB	DS.B	1		; Save BASIC program flag
+    IFCONST BASIC
+FNAMEW	DS.B	1		; File name write pointer
+FNAMER	DS.B	1		; File name read pointer
+FNAME	DS.B	16		; File name pointer
+BTMP1	DS.B	1		; BASIC temp var
+ENDLO	DS.B	1		; BASIC end lo byte
+ENDHI	DS.B	1		; BASIC end hi byte
+EOB	DS.B	2			; Pointer to End of BASIC for loaded program
+; XMODEM
+XBUF	DS.B    133     ; 133 byte buffer for XMODEM packet
+XBUFIX	DS.B    1
+XCRC	DS.B    2
+XFINAL	DS.B    1
+XBLK	DS.B    1
+XERRCNT	DS.B    1
+XABRT	DS.B    1
+    ENDIF
+IRQB1LO DS.B    1		; Hardware interrupt lo byte for BASIC 1
+IRQB1HI DS.B    1		; Hardware interrupt hi byte for BASIC 1
+IRQB4LO DS.B    1		; Hardware interrupt lo byte for BASIC 2/4
+IRQB4HI	DS.B	1		; Hardware interrupt hi byte for BASIC 2/4
+SP	DS.B	1
+EXITFLG	DS.B	1		; Exit flag
 
 ; Make sure not to use $90-95 these are Vectors for BASIC 2+
 	RORG	$90
 	DS.B	1		; Reserve so we get a compiler error if we
-				; allocate too much before
+					; allocate too much before

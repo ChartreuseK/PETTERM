@@ -1,6 +1,6 @@
 ;-----------------------------------------------------------------------
 ; PETTerm
-; Version 0.5.0
+; Version 0.7.0
 ;
 ; A bit-banged full duplex serial terminal for the PET 2001 computers,
 ; including those running BASIC 1. 
@@ -36,6 +36,7 @@
 ; we might be able to push a little bit.
 ;
 ; Hayden Kroepfl (Chartreuse) 2017-2020
+; Adam Whitney (K0FFY) 2022 - Added Exit and BASIC Save/Load Extension
 ;
 ; Changelog
 ; 0.2.0	
@@ -98,20 +99,103 @@
 ;     minicom (for nesting your serial terminals of course)
 ;     alpine (a bit cramped at 40 columns)
 ;     nethack (seems to work just fine)
+;
+; 0.6.0
+; 
+;   This version adds the option to Exit to BASIC and also SAVE/LOAD BASIC programs over serial.
+;   by Adam Whitney (K0FFY) - 2022
+;
+;   - Added menu options and support for sending or receiving BASIC programs.
+;
+;     The SAVE BASIC PROGRAM option will send the current in-memory BASIC program over the 
+;      serial connection with a header of the following bytes:
+;         0x00 0x00 0x00 0x53 (S) 0x41 (A) 0x56 (V) 0x45 (E) 0x00
+;      followed immediately by a program name entered in PETTERM terminated with a value of 0x00
+; 
+;      After the program name string will follow two bytes giving the starting address of the BASIC
+;      program ($0401 on the Commodore PET), and then finally the remainder of the BASIC program
+;      stored in the Commodore's memory.
+;    
+;     For example, let assume the following BASIC program is currenlty in memory:
+;        10 PRINT"HI"
+;
+;     Let's also say the user enters a program name of "HELLO" when saving in PETTERM.
+; 
+;     The SAVE BASIC PROGRAM option will then send the following data over serial:
+;
+;        0x00 0x00 0x00 0x53 0x41 0x56 0x45 0x00
+;        0x48 0x45 0x4c 0x4c 0x4f 0x00 0x01 0x04
+;        0x0b 0x04 0x0a 0x00 0x99 0x22 0x48 0x49
+;        0x22 0x00 0x00
 ;     
+;     This is the "000SAVE0" header followed by the program name of "HELLO0". After that
+;      is the entire contents of the BASIC program, including the first two bytes denoting the
+;      starting address of $0401 (the start of BASIC on the PET), which would be the same bytes
+;      saved if this program were written to tape or disk.
+;
+;     The LOAD BASIC PROGRAM option will wait to receive data over the serial connection,
+;      and then write each byte received to the start of BASIC address ($0401 on the PET)
+;      until all bytes have been received and stored according to the two bytes that 
+;      specify the memory pointer to the final byte of the BASIC code.
+;
+;     For example, if the 10 PRINT"HI" program from above was loaded using this option,
+;      then the following bytes would be written to the PET's memory starting at address
+;      $0401:
+;
+;      Memory Address: 0401 0402 0403 0404 0405 0406 0407 0408 0409 040a 040b
+;      Data:           0x0b 0x04 0x0a 0x00 0x99 0x22 0x48 0x49 0x22 0x00 0x00
+;
+;     The user can exit the LOAD BASIC PROGRAM option at any point by pressing the CLR/HOME
+;      key.
+;     
+;     Note: The Makefile was modified to build versions of PETTERM that both include and
+;      do not include these new options. The Makefile also now includes options to utilize
+;      higher memory portions of 8K, 16K, and 32K PET. These high memory versions omit
+;      the BASIC loader program, requiring the user to run the "SYS" command themselves.
+;
+;   - Included a POSIX C program and Makefile in the test folder than can be used for the
+;     SAVE BASIC and LOAD BASIC options.
+;   - Added an EXIT option to allow the user to exit PETTERM and return to BASIC, which was
+;     needed to support the LOAD BASIC PROGRAM option.
+;
+;     To support the EXIT option to return to BASIC, the memory locate of this program was
+;     shifted to starting address of $0C80 (SYS 3200). The program extends from this address
+;     to memory below the beginning of top of 8K memory at $2000, so this should function
+;     correctly on 8k PETs.
+;
+;     The starting address of $0C80 also means that the current maximum size of the BASIC
+;     programs supported is 2,375 bytes unless you use one of the "higher memory" versions
+;     (see more details regarding Makefile above).
 ;   
+; 0.6.1
+;
+;     Rewrote the RESETVIA and KRESETIO subroutines into a new and clean RESETIO subroutine,
+;     stripping down to only the essential VIA and PIA reset sequence and values.
+;
+;     Cleaned up the source code formatting for a consistent indentation using tabs.
+;
+; 0.7.0
+;
+;     This version now uses the XMODEM protocol to SAVE/LOAD BASIC programs over serial!
+;     by Adam Whitney (K0FFY) - 2022
+;
+;     It is currently written to use XMODEM-CRC, for which each block contains 128 bytes
+;     of data with a 16-bit CRC at the end.
+;
+;
 ; Written for the DASM assembler
 ;----------------------------------------------------------------------- 
 	PROCESSOR 6502
 
 ;-----------------------------------------------------------------------
 ; Zero page definitions
-; TODO: Should we move this to program memory so we don't overwrite
-;  any BASIC variables? Then we don't have to worry about using KERNAL
-;  routines as much.
+; Originally in zero page memory, these variables have been moved to
+; program memory. For any needed to be zero page for indirect, indexed
+; addressing mode, we have now located these explictly in constants.s.
+
 ;-----------------------------------------------------------------------
 	SEG.U	ZPAGE
-	RORG	$0
+	RORG	MYRORG		; RORG location for this memory segment
 	
 	INCLUDE	"zpage.s"
 	
@@ -129,8 +213,10 @@
 ;-----------------------------------------------------------------------
 ; Start of loaded data
 	SEG	CODE
-	ORG	$0401           ; Start address for PET computers
-	
+
+    IFNCONST HIMEM
+	ORG	SOB
+
 ;-----------------------------------------------------------------------
 ; Simple Basic 'Loader' - BASIC Statement to jump into our program
 BLDR
@@ -138,28 +224,33 @@ BLDR
 	DC.W 10		; Line Number = 10
 	DC.B $9E	; SYS
 	; Decimal Address in ASCII $30 is 0 $31 is 1, etc
-	DC.B (INIT/10000)%10 + '0
-	DC.B (INIT/ 1000)%10 + '0
-	DC.B (INIT/  100)%10 + '0
-	DC.B (INIT/   10)%10 + '0
-	DC.B (INIT/    1)%10 + '0
+	DC.B (MYORG/10000)%10 + '0
+	DC.B (MYORG/ 1000)%10 + '0
+	DC.B (MYORG/  100)%10 + '0
+	DC.B (MYORG/   10)%10 + '0
+	DC.B (MYORG/    1)%10 + '0
 
 	DC.B $0		; Line End
 BLDR_ENDL
 	DC.W $0		; LINK (End of program)
 ;-----------------------------------------------------------------------
+    ENDIF
 
-
+	ORG MYORG
 ;-----------------------------------------------------------------------
 ; Initialization
 INIT	SUBROUTINE
 	SEI			; Disable interrupts
 	
 	; Clear ZP?
-	
+
+	; We do plan to return to BASIC. Save the stack pointer.
+	TSX
+	STX	SP
+
 	; We never plan to return to BASIC, steal everything!
-	LDX	#$FF		; Set start of stack
-	TXS			; Set stack pointer to top of stack
+	;LDX	#$FF		; Set start of stack
+	;TXS			; Set stack pointer to top of stack
 	
 	; Determine which version of BASIC we have for a KERNAL
 	; TODO: What's a reliable way? Maybe probe for a byte that's
@@ -169,22 +260,32 @@ INIT	SUBROUTINE
 	; Initial baud rate	
 	LDA	#$03		; 1200 baud
 	STA	BAUD
-	
+
 	; Disable all PIA interrupt sources
 	LDA	PIA1_CRB
-	AND	#$FE		; Disable interrupts (60hz retrace int?)
-	STA	PIA1_CRB	
+	AND	#$FE			; Disable interrupts (60hz retrace int?)
+	STA	PIA1_CRB
 	LDA	PIA1_CRA
 	AND	#$FE
-	STA	PIA1_CRA	; Disable interrupts
-	
+	STA	PIA1_CRA		; Disable interrupts
+
 	LDA	PIA2_CRB
-	AND	#$FE		; Disable interrupts (60hz retrace int?)
-	STA	PIA2_CRB	
+	AND	#$FE			; Disable interrupts (60hz retrace int?)
+	STA	PIA2_CRB
 	LDA	PIA2_CRA
 	AND	#$FE
-	STA	PIA2_CRA	; Disable interrupts
-	
+	STA	PIA2_CRA		; Disable interrupts
+
+	; Save IRQ init value
+	LDA	BAS1_VECT_IRQ
+	STA	IRQB1LO			; Save IRQ lo byte for BASIC 1
+	LDA	BAS1_VECT_IRQ+1
+	STA	IRQB1HI			; Save IRQ hi byte for BASIC 1
+	LDA	BAS4_VECT_IRQ
+	STA	IRQB4LO			; Save IRQ lo byte for BASIC 2/4
+	LDA	BAS4_VECT_IRQ+1
+	STA	IRQB4HI			; Save IRQ hi byte for BASIC 2/4
+
 	; Install IRQ
 	LDA	#<IRQHDLR
 	LDX	#>IRQHDLR
@@ -193,9 +294,7 @@ INIT	SUBROUTINE
 	STA	BAS4_VECT_IRQ	; Let's see if we can get away with modifying
 	STX	BAS4_VECT_IRQ+1	; both versions vectors
 	
-	
 	JSR	INITVIA
-	
 	
 	; Initialize state
 	LDA	#STIDLE		; Output 1 idle tone first
@@ -218,6 +317,7 @@ INIT	SUBROUTINE
 	STA	ANSIIN
 	STA	ANSIINOS
 	STA	ATTR
+	STA	EXITFLG
 
 	; Set-up screen
 	STA	CURLOC
@@ -251,6 +351,14 @@ INIT	SUBROUTINE
 	STA	SC_UPPERMOD	
 	LDA	#SCLM_UPPER	; Default mode is uppercase only
 	STA	SC_LOWERMOD
+
+    IFCONST BASIC
+	; Clear BASIC I/O flags and variables
+	LDA	#0
+	STA	LOADB
+	STA	SAVEB
+	STA	EOB
+    ENDIF
 	
 	JSR	SERINIT
 	
@@ -259,7 +367,7 @@ INIT	SUBROUTINE
 ; Start of program (after INIT called)
 START	SUBROUTINE
 	CLI	; Enable interrupts
-	
+
 .remenu
 	JSR	DOMENU
 	
@@ -274,12 +382,13 @@ START	SUBROUTINE
 	STA	ANSIINOS
 	STA	DLYSCROLL
 	
-	
-	JSR	CLRSCR
+.go	JSR	CLRSCR
 	LDX	#0
 	LDY	#0
 	JSR	GOTOXY
-
+    IFCONST BASIC
+	JSR	SAVELOAD	; Save or Load BASIC if requested
+    ENDIF
 .loop
 	LDX	RXBUFR
 	CPX	RXBUFW
@@ -341,12 +450,18 @@ START	SUBROUTINE
 	STA	TXBYTE
 	LDA	#$FF
 	STA	TXNEW		; Signal to transmit
+
+	LDA 	#1
+	CMP	EXITFLG
+	BEQ	.done
 .nokey
 	JMP	.loop
 
 .termkey
 	CMP	#$F0		; $F0 - Menu key
-	BEQ	.remenu
+	BNE	.tkmore
+	JMP	.remenu
+.tkmore	
 	CMP	#$F1		; $F1 - Up arrow
 	BEQ	.arrowkey
 	CMP	#$F2		; $F2 - Down arrow
@@ -370,7 +485,94 @@ START	SUBROUTINE
 	JSR	SENDCH
 
 	JMP	.loop
+.done	
+	; We are about to exit to BASIC.
+	
+	; We have to make sure the system I/O controllers, vectors,
+	; and the BASIC enviroment is reset to a functional state.
 
+	; Reset the IRQ Vector
+
+	JSR 	RESETIRQ
+
+	; RESETIO resets both the PIA and VIA to an interactive
+	; state for the BASIC environment.
+
+	SEI
+	JSR	RESETIO
+	;JSR	INIT_SCR
+	CLI
+
+    IFCONST BASIC
+
+	; Next, move the Start of Variables, Start of Arrays, and
+	; End of Arrays Location to the end of any BASIC programs
+	; now in memory. This is essential if we loaded a new
+	; BASIC program via PETTERM.
+
+	; Load the current End of Basic Location
+	LDX	EOB		; Load End of Basic Location
+	CPX	#0		; Check if it changed from loading a BASIC program
+	BEQ	.doneEOB
+
+	; Check SOB pointer location to determine if we are running 
+	; BASIC1 or BASIC2/4. If you don't find $0401 in the
+	; BASIC 1 SOB Pointer Location, then assume BASIC 2/4.
+
+	LDX	$007A
+	CPX	#$01
+	BNE	.done4
+	LDX	$007B
+	CPX	#$04
+	BNE	.done4
+
+	; We found $0401 in $7A/$7B, so assume we're running BASIC 1.
+
+	; Load the current End of Basic Location
+	LDX	EOB		; Load End of Basic Location
+
+	; Set the new SOV, SOA, and EOA values.
+	STX	BAS1_SOV	; Set New Start of Variables
+	STX	BAS1_SOA	; Set New Start of Arrays
+	STX	BAS1_EOA	; Set New End of Arrays
+
+	LDX	EOB+1
+
+	STX	BAS1_SOV+1	; Set New Start of Variables
+	STX	BAS1_SOA+1	; Set New Start of Arrays
+	STX	BAS1_EOA+1	; Set New End of Arrays
+
+.done4
+	; As most will be running BASIC 2/4 and also the SOV, SOA,
+	; and EOA pointers for BASIC 2/4 are within the Input Buffer
+	; memory for BASIC 1, it is safest to go ahead and set
+	; the new SOV, SOA, and EOA values there regardless of detected
+	; BASIC version.
+
+	; Load the current End of Basic Location
+	LDX	EOB			; Load End of Basic Location
+
+	; Set the new SOV, SOA, and EOA values.
+	STX	BAS4_SOV	; Set New Start of Variables
+	STX	BAS4_SOA	; Set New Start of Arrays
+	STX	BAS4_EOA	; Set New End of Arrays
+
+	LDX	EOB+1
+
+	STX	BAS4_SOV+1
+	STX	BAS4_SOA+1
+	STX	BAS4_EOA+1
+
+.doneEOB
+
+    ENDIF ; IFCONST BASIC
+
+	; Restore the Stack Pointer to the saved value.
+
+	LDX	SP		; Retrieve initial start of stack
+	TXS			; Set stack pointer to top of stack
+
+	RTS
 
 ;-----------------------------------------------------------------------
 ;-- Bit-banged serial code ---------------------------------------------
@@ -393,6 +595,17 @@ START	SUBROUTINE
 ;-----------------------------------------------------------------------
 	INCLUDE "menu.s"
 
+    IFCONST BASIC
+;-----------------------------------------------------------------------
+;-- XMODEM file transfer -----------------------------------------------
+;-----------------------------------------------------------------------
+	INCLUDE "xmodem.s"
+;-----------------------------------------------------------------------
+;-- BASIC load and save code -------------------------------------------
+;-----------------------------------------------------------------------
+	INCLUDE "basic.s"
+
+    ENDIF
 	
 
 ;-----------------------------------------------------------------------
@@ -560,9 +773,6 @@ IRQHDLR	SUBROUTINE ; 36 cycles till we hit here from IRQ firing
 	RTI			; Return from interrupt
 
 
-	
-
-
 ;-----------------------------------------------------------------------
 ; Initialize VIA and userport
 INITVIA SUBROUTINE
@@ -580,11 +790,110 @@ INITVIA SUBROUTINE
 	LDA	#$C2		; Enable Timer 1 interrupt and CA1 interrupt
 	STA	VIA_IER
 	RTS
-	
-	
-
-
 
 ;----------------------------------------------------------------------------
+; Reset IRQ vector
+RESETIRQ SUBROUTINE
+
+	; Disable interrupts
+	SEI
+
+	; Check BASIC version.
+	LDX	$007A
+	CPX	#$01
+	BNE	.irqbas4
+	LDX	$007B
+	CPX	#$04
+	BNE	.irqbas4
+
+	; Found $0401 in Start of Basic Location for BASIC 1 
+
+	; Restore IRQ vector init values
+	LDA	IRQB1LO
+	STA	BAS1_VECT_IRQ
+	LDA	IRQB1HI
+	STA	BAS1_VECT_IRQ+1
+	JMP	.irqdone
+
+.irqbas4
+
+	; Otherwise, this must be running BASIC 2/4
+
+	; Restore IRQ vector init values
+	LDA	IRQB4LO
+	STA	BAS4_VECT_IRQ
+	LDA	IRQB4HI
+	STA	BAS4_VECT_IRQ+1
+.irqdone
+	; Enable interrupts
+	CLI
+
+	RTS
+
+;-----------------------------------------------------------------------
+; Reset VIA and PIA according to how the PET kernel does it.
+;
+; References:
+;   http://www.zimmers.net/cbmpics/cbm/PETx/petmem.txt
+;   http://www.zimmers.net/anonftp/pub/cbm/src/pet/pet_rom4_disassembly.txt
+;    - Reference kernal location: $E60F - $E6D0
+;
+RESETIO SUBROUTINE
+
+; Startup Values for VIA
+	LDA	#$00
+	STA	VIA_DDRA	; $E843
+	STA	VIA_IFR		; $E84D
+
+	LDA	#$1E ; #$5B?
+	STA	VIA_TIM1L	; $E844
+
+	LDA	#$FF
+	STA	VIA_PORTAH	; $E841
+	STA	VIA_PORTA	; $E84F
+	STA	VIA_TIM1HL	; $E847
+
+	LDA	#$0C ; #$0E?
+	STA	VIA_PCR		; $E84C
+
+; Kernal Initialization Values in Sequence
+	LDA	#$7F
+	STA	VIA_IER		; $E84E
+	LDX	#$FF
+	LDA	#$0F
+	STA	PIA1_PA		; $E810
+	ASL
+	STA	VIA_PORTB	; $E840
+	STA	VIA_DDRB	; $E842
+	STX	PIA2_PB		; $E822
+	STX	VIA_TIM1H	; $E845
+
+	LDA	#$3D
+	STA	PIA1_CRB	; $E813
+	BIT	PIA1_PB		; $E812
+
+	LDA	#$3C
+	STA	PIA2_CRA	; $E821
+	STA	PIA2_CRB	; $E823
+	STA	PIA1_CRA	; $E811
+	STX	PIA2_PB		; $E822
+
+	LDA	#$0E
+	STA	VIA_IER		; $E84E
+
+	LDA	#$00
+	STA	VIA_ACR		; $E84B
+
+	LDA	#$0F
+	STA	VIA_SR		; $E84A
+
+	LDX	#$07
+	LDA	$E74D,X		; Timer 2 LO Values DATA
+	STA	VIA_TIM2L	; $E848
+
+	RTS
+
+;----------------------------------------------------------------------------
+
 	ECHO "Program size in HEX: ", .-$401
 	ECHO "Size from start of ram HEX: ", .
