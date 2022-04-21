@@ -6,12 +6,13 @@
 ; Receive a byte over the serial connection.
 RXBYTE SUBROUTINE
 .norx
+	LDA	#0		; Return 0 if no byte available
 	LDX	RXBUFR
-	CPX	RXBUFW
-	BEQ	.norx
+	CPX	RXBUFW		; Data available?
+	BEQ	.norx		; Z will be set here to 0 so we can test
 	; Handle new byte
-	LDA	RXBUF,X		; new character
 	INC	RXBUFR		; acknowledge byte by incrementing
+	LDA	RXBUF,X		; new character (sets Z if 0, clears otherwise)
 	RTS
 
 ;-----------------------------------------------------------------------
