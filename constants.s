@@ -44,12 +44,12 @@ PIA1_PB		EQU	$E812
 PIA1_CRA	EQU	$E811
 PIA1_CRB	EQU	$E813
 
-RXBUF		EQU $0300		; Ring buffer of recieved chars
-
 PIA2_PB		EQU	$E822
 PIA2_CRA	EQU	$E821
 PIA2_CRB	EQU	$E823
 
+
+RXBUF		EQU 	$0300		; Ring buffer of recieved chars
 SCRMEM		EQU	$8000		; Start of screen memory
 SCREND		EQU	SCRMEM+(SCRCOL*SCRROW) ; End of screen memory
 SCRBTML		EQU	SCRMEM+(SCRCOL*(SCRROW-1)) ; Start of last row
@@ -113,3 +113,17 @@ SCUM_MIXEDINV	EQU	-$40
 SCLM_UPPER	EQU	-$60
 SCLM_MIXED	EQU	-$60
 SCLM_MIXEDINV	EQU	-$20
+
+
+;-----------------------------------------------------------------------
+; XMODEM Control Characters
+SOH	EQU	#$01
+EOT	EQU	#$04
+ACK	EQU	#$06
+NAK	EQU	#$15
+CAN	EQU	#$18
+CR	EQU	#$0d
+LF	EQU	#$0a
+ESC	EQU	#$1b
+
+XMDM_PKTLEN	EQU #132

@@ -182,6 +182,11 @@
 ;     It is currently written to use XMODEM-CRC, for which each block contains 128 bytes
 ;     of data with a 16-bit CRC at the end.
 ;
+; 0.7.1
+;     Modified XMODEM code to use the traditional checksum instead of CRC. It's less 
+;     resiliant but more widely implemented, and more importantly much much smaller.
+;     >512 bytes less due to the checksum tables
+;
 ;
 ; Written for the DASM assembler
 ;----------------------------------------------------------------------- 

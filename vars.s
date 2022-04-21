@@ -87,9 +87,8 @@ ENDLO	DS.B	1		; BASIC end lo byte
 ENDHI	DS.B	1		; BASIC end hi byte
 EOB	DS.B	2		; Pointer to End of BASIC for loaded program
 ; XMODEM
-XBUF	DS.B	133		; 133 byte buffer for XMODEM packet
+XBUF	DS.B	XMDM_PKTLEN	; 133 byte buffer for XMODEM packet
 XBUFIX	DS.B	1
-XCRC	DS.B	2
 XFINAL	DS.B	1
 XBLK	DS.B	1
 XERRCNT	DS.B	1
