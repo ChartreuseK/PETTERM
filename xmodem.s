@@ -17,13 +17,8 @@ RXBYTE SUBROUTINE
 ;-----------------------------------------------------------------------
 ; Flush the receive buffer
 RXFLUSH SUBROUTINE
-.rxflush
-	LDX	RXBUFR
-	CPX	RXBUFW
-	BEQ	.rxempty	; loop till flushed
-	INC	RXBUFR		; acknowledge byte by incrementing
-	JMP	.rxflush	
-.rxempty
+	LDX	RXBUFW		; Reset read point to write pointer to clear
+	STX	RXBUFR		; All waiting bytes
 	RTS
 
 ;-----------------------------------------------------------------------
