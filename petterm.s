@@ -900,6 +900,7 @@ RESETIO SUBROUTINE
 	RTS
 
 ;----------------------------------------------------------------------------
-
-	ECHO "Program size in HEX: ", .-MYORG
+ENDLABEL
+	ECHO "PSIZE", .-MYORG
+	ECHO "Program size in HEX (excluding loader): ", .-MYORG
 	ECHO "Program end location HEX: ", .
