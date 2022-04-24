@@ -38,7 +38,7 @@ XINITRX SUBROUTINE
 ; Receive a block via XMODEM.
 XRECV SUBROUTINE
 .xrxstart
-	JSR	RXBYTE
+	JSR	GETCH
 	
 	CMP	#ESC		; ESC character
 	BNE	.xrx
@@ -76,10 +76,10 @@ XRECV SUBROUTINE
 .xrxdata0
 	LDY	#0
 .xrxdata1
-	JSR	RXBYTE
+	JSR	GETCH
 	STA	XBUF,Y
 	INY
-	CPY	#XMDM_PKTLEN	; received entire block of 132 bytes?
+	CPY	#XMDM_PKTLEN-1	; received entire block of 131 bytes?
 	BNE	.xrxdata1
 	; we have received the full block into XBUF
 	LDY	#0
@@ -118,7 +118,7 @@ XRECV SUBROUTINE
 ; Acknowledge receipt of XMODEM block.
 XACK SUBROUTINE
 	INC	XBLK		; increment block counter
-	LDA	#$06		; ACK character
+	LDA	#ACK		; ACK character
 	JSR	SENDCH		; send ACK
 	RTS
 
