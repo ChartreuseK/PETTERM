@@ -225,19 +225,21 @@ BLDR
 	DC.W 10		; Line Number = 10
 	DC.B $9E	; SYS
 	; Decimal Address in ASCII $30 is 0 $31 is 1, etc
-	DC.B (MYORG/10000)%10 + '0
-	DC.B (MYORG/ 1000)%10 + '0
-	DC.B (MYORG/  100)%10 + '0
-	DC.B (MYORG/   10)%10 + '0
-	DC.B (MYORG/    1)%10 + '0
+	DC.B (INIT/10000)%10 + '0
+	DC.B (INIT/ 1000)%10 + '0
+	DC.B (INIT/  100)%10 + '0
+	DC.B (INIT/   10)%10 + '0
+	DC.B (INIT/    1)%10 + '0
 
 	DC.B $0		; Line End
 BLDR_ENDL
 	DC.W $0		; LINK (End of program)
 ;-----------------------------------------------------------------------
-    ENDIF
+    ELSE
 
 	ORG MYORG
+
+    ENDIF
 ;-----------------------------------------------------------------------
 ; Initialization
 INIT	SUBROUTINE

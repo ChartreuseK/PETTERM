@@ -98,18 +98,18 @@ Basic:
 
 The higher memory versions with the BASIC save/load extension
 
-- petterm8K_40G.prg - 40 column PETs with graphics keyboard, BASIC save/load, higher memory version (SYS 3200)
-- petterm8K_80G.prg - 80 column PETs with graphics keyboard, BASIC save/load, higher memory version (SYS 3200)
-- petterm8K_40B.prg - 40 column PETs with business keyboard, BASIC save/load, higher memory version (SYS 3200)
-- petterm8K_80B.prg - 80 column PETs with business keyboard, BASIC save/load, higher memory version (SYS 3200)
+- petterm8K_40G.prg - 40 column PETs with graphics keyboard, BASIC save/load, higher memory version (SYS 2050)
+- petterm8K_80G.prg - 80 column PETs with graphics keyboard, BASIC save/load, higher memory version (SYS 2050)
+- petterm8K_40B.prg - 40 column PETs with business keyboard, BASIC save/load, higher memory version (SYS 2050)
+- petterm8K_80B.prg - 80 column PETs with business keyboard, BASIC save/load, higher memory version (SYS 2050)
 - petterm16K_40G.prg - 40 column PETs with graphics keyboard, BASIC save/load, higher memory version (SYS 8192)
 - petterm16K_80G.prg - 80 column PETs with graphics keyboard, BASIC save/load, higher memory version (SYS 8192)
 - petterm16K_40B.prg - 40 column PETs with business keyboard, BASIC save/load, higher memory version (SYS 8192)
 - petterm16K_80B.prg - 80 column PETs with business keyboard, BASIC save/load, higher memory version (SYS 8192)
-- petterm32K_40G.prg - 40 column PETs with graphics keyboard, BASIC save/load, higher memory version (SYS 24576)
-- petterm32K_80G.prg - 80 column PETs with graphics keyboard, BASIC save/load, higher memory version (SYS 24576)
-- petterm32K_40B.prg - 40 column PETs with business keyboard, BASIC save/load, higher memory version (SYS 24576)
-- petterm32K_80B.prg - 80 column PETs with business keyboard, BASIC save/load, higher memory version (SYS 24576)
+- petterm32K_40G.prg - 40 column PETs with graphics keyboard, BASIC save/load, higher memory version (SYS 20480)
+- petterm32K_80G.prg - 80 column PETs with graphics keyboard, BASIC save/load, higher memory version (SYS 20480)
+- petterm32K_40B.prg - 40 column PETs with business keyboard, BASIC save/load, higher memory version (SYS 20480)
+- petterm32K_80B.prg - 80 column PETs with business keyboard, BASIC save/load, higher memory version (SYS 20480)
 
 PRG files are the native programs, can be added to a tape or disk image
 
