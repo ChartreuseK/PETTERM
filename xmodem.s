@@ -215,7 +215,7 @@ XMIT SUBROUTINE
 	CPX	#XMDM_PKTLEN-1	; sent final byte?
 	BNE	.xsend
 
-	JSR	RXBYTE
+	JSR	GETCH
 	CMP	#ACK		; ACK character
 	BNE	.xnak
 
@@ -269,7 +269,7 @@ XFINISH SUBROUTINE
 	LDA	#EOT		; EOT charachter
 	JSR	SENDCH		; send EOT
 
-	JSR	RXBYTE
+	JSR	GETCH
 	CMP	#ACK		; ACK character
 	BNE	.xtxeot
 .xtxdone
