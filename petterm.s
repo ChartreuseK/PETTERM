@@ -717,17 +717,17 @@ IRQHDLR	SUBROUTINE ; 36 cycles till we hit here from IRQ firing
 	JMP	.keyend
 	
 .fastkbd
+	DEC POLLTGT
+	BEQ	.final		; 0 - finish pull run
 	LDA	POLLTGT
-	BEQ	.final		; 0 
 	CMP	#$11
-	BEQ	.first		; 12
-	; One of the 10 scanning rows ;1-11
+	BEQ	.first		; 11 - setup poll run
+	BCS .exit		; > 11 - counting down to run
+	; One of the 10 scanning rows ;1-10
 	JSR	KBDROWPOLL
-	DEC	POLLTGT
 	JMP	.exit
 .first	
 	JSR	KBDROWSETUP
-	DEC	POLLTGT
 	JMP	.exit
 .final
 	LDA	POLLRES
