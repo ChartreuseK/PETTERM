@@ -35,7 +35,7 @@ KBDROWSETUP	SUBROUTINE	;6;
 	STA 	KBITFND		;3; If KBITFND clear at end of polling then no key pressed
 	RTS			;6
 
-; If a key way pressed in the polling convert to a scancode
+; If a key was pressed in the polling convert to a scancode
 ; Returns pressed key or 0
 ; 90 cycles worst case
 KBDROWCONV	SUBROUTINE	;6;
@@ -191,7 +191,7 @@ KBDPOLL		SUBROUTINE
 
 
 ; A log2 table allows quick decoding by giving the index of the highest bit set
-; Remembering that modifers need to be checked seperatly
+; Remembering that modifers need to be checked separately
 ; This table is inverted due to our key tables being backwards
 ; 7 - LOG_2(x)
 LOG2_TBL DC.B -1,7,6,6,5,5,5,5,4,4,4,4,4,4,4,4
@@ -301,16 +301,13 @@ SKR9	DC.B	 '=, '.,$EF,$03, '<, ' , '{,$FF
 	IF KEYBOARD == "8296KBD"
     ECHO "Compiling for PET 8296 Keyboard"
     
-    ECHO "This table is just the business keyboard table it has not been modified yet, do not use yet"
-    ERR
-    
 ; Matrix for PET 8296 English keyboards 
 KR0	DC.B	 '. ,$0E,$F3,'8 ,'- ,'8 ,'5 ,'2  ;$8E = BothShift+2, $1D = CursRight
 KR1	DC.B	 '9 ,$EF,'^ ,'7 ,'0 ,'7 ,'4 ,'1
-KR2	DC.B	 '5 ,'\ ,'k ,'; ,'h ,'f ,'s ,$1B ; $9B = ESC
-KR3	DC.B	 '6 ,'[ ,'l ,$0D,'j ,'g ,'d ,'a
-KR4	DC.B	 $08,'p ,'i ,'@ ,'y ,'r ,'w ,$09 ;$C0 = nonshiftable @, $FF= nonshift DEL
-KR5	DC.B	 '4 ,'] ,'o ,$F2,'u ,'t ,'e ,'q	 ; $91 = CursUP
+KR2	DC.B	 '5 ,'; ,'k ,'] ,'h ,'f ,'s ,$1B ; $9B = ESC
+KR3	DC.B	 '6 ,'@ ,'l ,$0D,'j ,'g ,'d ,'a
+KR4	DC.B	 $08,'p ,'i ,'\ ,'y ,'r ,'w ,$09 ;$C0 = nonshiftable @, $FF= nonshift DEL
+KR5	DC.B	 '4 ,'[ ,'o ,$F2,'u ,'t ,'e ,'q	 ; $91 = CursUP
 KR6	DC.B	 '3 ,$00,$19,'. ,'. ,'b ,'c ,$00 ; $AE-> KP.
 KR7	DC.B	 '2 ,$04,$0F,'0 ,$2C,'n ,'v ,'z  ; Repeat->^D, $0F = Z+A+L??
 KR8	DC.B	 '1 ,'/ ,$15,$F0,'m ,'  ,'x ,$FF ; $15 - RVS + A + L??, B1 = KP1
@@ -328,11 +325,11 @@ CTRLMASK DC.B   $00,$00,$00,$00,$00,$00,$00,$00,$01,$00
 ; Matrix for PET 8296 Keyboard
 KBDMATRIX_SHIFT
 SKR0	DC.B	 '> ,$0E,$F4,'8 ,'= ,'( ,'% ,'"  ;";$8E = BothShift+2, $9D = CursRight
-SKR1	DC.B	 '9 ,$EF,'^ ,'7 ,'0 ,$27,'$ ,'!
-SKR2	DC.B	 '5 ,'| ,'K ,'+ ,'H ,'F ,'S ,$1B ; $1B = ESC
-SKR3	DC.B	 '6 ,'{ ,'L ,$0D,'J ,'G ,'D ,'A
-SKR4	DC.B	 $08,'P ,'I ,'@ ,'Y ,'R ,'W ,$09 ;$C0 = nonshiftable @, $FF= nonshift DEL
-SKR5	DC.B	 '4 ,'} ,'O ,$F1,'U ,'T ,'E ,'Q	 ; $91 = CursUP
+SKR1	DC.B	 '9 ,$EF,'| ,'7 ,'0 ,$27,'$ ,'!
+SKR2	DC.B	 '5 ,'+ ,'K ,'} ,'H ,'F ,'S ,$1B ; $1B = ESC
+SKR3	DC.B	 '6 ,'~ ,'L ,$0D,'J ,'G ,'D ,'A
+SKR4	DC.B	 $08,'P ,'I ,'\ ,'Y ,'R ,'W ,$09 ;$C0 = nonshiftable @, $FF= nonshift DEL
+SKR5	DC.B	 '4 ,'{ ,'O ,$F1,'U ,'T ,'E ,'Q	 ; $91 = CursUP
 SKR6	DC.B	 '3 ,$00,$19,'. ,'> ,'B ,'C ,$00 ; $AE-> KP.
 SKR7	DC.B	 '2 ,$04,$0F,'0 ,'< ,'N ,'V ,'Z  ; Repeat->^D, $0F = Z+A+L??
 SKR8	DC.B	 '1 ,'? ,$15,$F0,'M ,'  ,'X ,$FF ; $15 - RVS + A + L??, B1 = KP1
@@ -340,8 +337,8 @@ SKR9	DC.B	 $16,$EF,'* ,$83,') ,'& ,'# ,$08 ; $88 Left Arrow to BS?, ^V=TAB+<-+DE
     ENDIF
 
 
-; Custom keys for graphic keyboards
-; Shift + []   = {}
-; Shift + '    = `
-; Shift + @    = ~
-; Shift + ^ (up arrow) = |
+; Custom keys for graphic and 8296 keyboards  (ASCII values)
+; Shift + []   = {}             123 125
+; Shift + '    = `              96
+; Shift + @    = ~              126
+; Shift + ^ (up arrow) = |      124
