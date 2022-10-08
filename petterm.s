@@ -1,6 +1,6 @@
 ;-----------------------------------------------------------------------
 ; PETTerm
-; Version 0.7.0
+; Version 0.7.1
 ;
 ; A bit-banged full duplex serial terminal for the PET 2001 computers,
 ; including those running BASIC 1. 
@@ -181,6 +181,10 @@
 ;
 ;     It is currently written to use XMODEM-CRC, for which each block contains 128 bytes
 ;     of data with a 16-bit CRC at the end.
+;
+; 0.7.1
+;
+;     PET 8296 Keyboard Support by Leif Bloomquist (Schema) - 2022
 ;
 ;
 ; Written for the DASM assembler
