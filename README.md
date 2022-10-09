@@ -93,6 +93,7 @@ The original PETTERM without the BASIC save/load extension
 - petterm40B - 40 column PETs with business keyboard
 - petterm80G - 80 column PETs with graphics keyboard
 - petterm80B - 80 column PETs with business keyboard
+- petterm8296 - 80 column PET 8296
 
 Basic:
 
@@ -110,6 +111,7 @@ The higher memory versions with the BASIC save/load extension
 - petterm32K_80G.prg - 80 column PETs with graphics keyboard, BASIC save/load, higher memory version (SYS 24576)
 - petterm32K_40B.prg - 40 column PETs with business keyboard, BASIC save/load, higher memory version (SYS 24576)
 - petterm32K_80B.prg - 80 column PETs with business keyboard, BASIC save/load, higher memory version (SYS 24576)
+- petterm8296B.prg   - PET 8296, BASIC save/load, higher memory version (SYS 24576)  (not tested)
 
 PRG files are the native programs, can be added to a tape or disk image
 

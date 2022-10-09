@@ -167,8 +167,13 @@ DOMENU	SUBROUTINE
 	
 	;	 0123456789012345678901234567890123456789
 S_BANNER
-	DC.B	"PETTERM v0.7.0        CHARTREUSE - 2020",13,10
+	DC.B	"PETTERM v0.7.1        CHARTREUSE - 2020",13,10
 	DC.B	"--------------------+ K0FFY        2022",13,10
+    
+	IF KEYBOARD == "8296KBD"
+    DC.B	"                    + SCHEMA       2022",13,10
+    ENDIF
+    
 	DC.B	"                    +------------------",13,10,10,0
 S_MENU
 	DC.B	"[1] DECREASE BAUD RATE",13,10,10
